@@ -65,11 +65,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
         holder.ivActiveIndicator.setVisibility(isActive ? View.VISIBLE : View.GONE);
         holder.tvTitle.setTextColor(isActive ? context.getColor(R.color.accent_mars) : context.getColor(R.color.text_primary));
 
-        Glide.with(context)
-                .load(song.getAlbumArtUri())
-                .placeholder(R.drawable.ic_music_minimal)
-                .error(R.drawable.ic_music_minimal)
-                .into(holder.ivArt);
+        com.rafa.play.util.AlbumArtHelper.loadIntoImageView(holder.ivArt, song, 12);
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {

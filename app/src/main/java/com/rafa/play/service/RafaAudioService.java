@@ -294,24 +294,19 @@ public class RafaAudioService extends Service implements MediaPlayer.OnPreparedL
     private void extractPaletteColor(Song song) {
         new Thread(() -> {
             try {
-                InputStream is = getContentResolver().openInputStream(song.getAlbumArtUri());
-                if (is != null) {
-                    Bitmap bmp = BitmapFactory.decodeStream(is);
-                    is.close();
-                    if (bmp != null) {
-                        Palette p = Palette.from(bmp).generate();
-                        int color = p.getVibrantColor(p.getDominantColor(0xFFFF453A));
-                        dynamicAccentColor = color;
-                        new Handler(Looper.getMainLooper()).post(() -> {
-                            for (PlaybackCallback cb : callbacks) {
-                                cb.onDynamicColorChanged(color);
-                            }
-                        });
-                        return;
-                    }
+                Bitmap bmp = com.rafa.play.util.AlbumArtHelper.loadArtworkBitmap(this, song);
+                if (bmp != null) {
+                    Palette p = Palette.from(bmp).generate();
+                    int color = p.getVibrantColor(p.getDominantColor(0xFFFF453A));
+                    dynamicAccentColor = color;
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        for (PlaybackCallback cb : callbacks) {
+                            cb.onDynamicColorChanged(color);
+                        }
+                    });
+                    return;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
             dynamicAccentColor = 0xFFFF453A;
             new Handler(Looper.getMainLooper()).post(() -> {
                 for (PlaybackCallback cb : callbacks) {

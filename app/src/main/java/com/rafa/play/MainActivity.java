@@ -14,29 +14,36 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.bumptech.glide.Glide;
 import com.google.android.material.imageview.ShapeableImageView;
+import com.rafa.play.adapter.LyricsAdapter;
 import com.rafa.play.adapter.MainPagerAdapter;
 import com.rafa.play.data.MusicRepository;
+import com.rafa.play.model.LyricLine;
 import com.rafa.play.model.Playlist;
 import com.rafa.play.model.Song;
 import com.rafa.play.service.RafaAudioService;
-import com.rafa.play.views.CurvedArcSeekBar;
+import com.rafa.play.util.AlbumArtHelper;
+import com.rafa.play.util.LyricsHelper;
+import com.rafa.play.views.MarsCurvedEdgeSeekBar;
+import com.rafa.play.views.MarsCurvedHeaderLayout;
 import com.rafa.play.views.PlanetQueueView;
 
 import java.util.ArrayList;
@@ -52,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private MusicRepository repository;
     private List<Song> songList = new ArrayList<>();
 
-    // Main views
+    // Main navigation views
     private ViewPager2 viewPager;
     private MainPagerAdapter pagerAdapter;
     private TextView tabSongs;
@@ -75,28 +82,32 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private TextView tvPaddleArtist;
     private ImageButton btnPaddlePlayPause;
 
-    // Full Mars Player
+    // Mars Full Player
     private View fullPlayerLayout;
-    private ShapeableImageView ivPlayerArt;
-    private FrameLayout artworkContainer;
-    private CurvedArcSeekBar curvedArcSeekBar;
+    private MarsCurvedHeaderLayout marsCurvedHeader;
+    private ImageView ivPlayerArt;
+    private MarsCurvedEdgeSeekBar marsCurvedEdgeSeekBar;
     private PlanetQueueView planetQueueView;
+    private RecyclerView rvLyrics;
+    private LyricsAdapter lyricsAdapter;
+    private List<LyricLine> currentLyrics = new ArrayList<>();
+
     private TextView tvPlayerTitle;
     private TextView tvPlayerArtist;
     private TextView tvPlayerTopTitle;
-    private TextView tvCurrentTime;
-    private TextView tvTotalTime;
+    private TextView tvCurrentLyricLine;
+
     private ImageButton btnPlayerPlayPause;
     private FrameLayout btnPlayPauseWrapper;
     private ImageButton btnShuffle;
     private ImageButton btnRepeat;
     private ImageButton btnPrev;
     private ImageButton btnNext;
-    private ImageButton btnToggleShape;
+    private ImageButton btnToggleLyrics;
     private ImageButton btnToggleOrbit;
 
-    private boolean isCapsuleShape = true;
-    private boolean isOrbitViewVisible = false;
+    private boolean isLyricsVisible = false;
+    private boolean isOrbitVisible = false;
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -159,23 +170,41 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         btnPaddlePlayPause = findViewById(R.id.btnPaddlePlayPause);
 
         fullPlayerLayout = findViewById(R.id.fullPlayerLayout);
+        marsCurvedHeader = findViewById(R.id.marsCurvedHeader);
         ivPlayerArt = findViewById(R.id.ivPlayerArt);
-        artworkContainer = findViewById(R.id.artworkContainer);
-        curvedArcSeekBar = findViewById(R.id.curvedArcSeekBar);
+        marsCurvedEdgeSeekBar = findViewById(R.id.marsCurvedEdgeSeekBar);
         planetQueueView = findViewById(R.id.planetQueueView);
+        rvLyrics = findViewById(R.id.rvLyrics);
+
         tvPlayerTitle = findViewById(R.id.tvPlayerTitle);
         tvPlayerArtist = findViewById(R.id.tvPlayerArtist);
         tvPlayerTopTitle = findViewById(R.id.tvPlayerTopTitle);
-        tvCurrentTime = findViewById(R.id.tvCurrentTime);
-        tvTotalTime = findViewById(R.id.tvTotalTime);
+        tvCurrentLyricLine = findViewById(R.id.tvCurrentLyricLine);
+
         btnPlayerPlayPause = findViewById(R.id.btnPlayerPlayPause);
         btnPlayPauseWrapper = findViewById(R.id.btnPlayPauseWrapper);
         btnShuffle = findViewById(R.id.btnShuffle);
         btnRepeat = findViewById(R.id.btnRepeat);
         btnPrev = findViewById(R.id.btnPrev);
         btnNext = findViewById(R.id.btnNext);
-        btnToggleShape = findViewById(R.id.btnToggleShape);
+        btnToggleLyrics = findViewById(R.id.btnToggleLyrics);
         btnToggleOrbit = findViewById(R.id.btnToggleOrbit);
+
+        // Set curved dome height to 52% of total screen height
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int headerHeight = (int) (dm.heightPixels * 0.52f);
+        ViewGroup.LayoutParams lp = marsCurvedHeader.getLayoutParams();
+        lp.height = headerHeight;
+        marsCurvedHeader.setLayoutParams(lp);
+
+        // Setup Lyrics RecyclerView
+        lyricsAdapter = new LyricsAdapter(this, (line, position) -> {
+            if (audioService != null) {
+                audioService.seekTo((int) line.getTimeMs());
+            }
+        });
+        rvLyrics.setLayoutManager(new LinearLayoutManager(this));
+        rvLyrics.setAdapter(lyricsAdapter);
 
         pagerAdapter = new MainPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
@@ -280,29 +309,36 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             }
         });
 
-        // Capsule vs Square shape toggle
-        btnToggleShape.setOnClickListener(v -> {
-            isCapsuleShape = !isCapsuleShape;
-            ivPlayerArt.setShapeAppearanceModel(
-                    ivPlayerArt.getShapeAppearanceModel()
-                            .toBuilder()
-                            .setAllCornerSizes(isCapsuleShape ? dp(140) : dp(28))
-                            .build()
-            );
+        // Toggle synchronized lyrics overlay
+        btnToggleLyrics.setOnClickListener(v -> {
+            isLyricsVisible = !isLyricsVisible;
+            if (isLyricsVisible) {
+                isOrbitVisible = false;
+                planetQueueView.setVisibility(View.GONE);
+                rvLyrics.setVisibility(View.VISIBLE);
+                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(getColor(R.color.accent_mars)));
+                btnToggleOrbit.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
+            } else {
+                rvLyrics.setVisibility(View.GONE);
+                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
+            }
         });
 
-        // Orbital discovery queue toggle
+        // Toggle orbital discovery queue overlay
         btnToggleOrbit.setOnClickListener(v -> {
-            isOrbitViewVisible = !isOrbitViewVisible;
-            if (isOrbitViewVisible) {
-                artworkContainer.setVisibility(View.GONE);
+            isOrbitVisible = !isOrbitVisible;
+            if (isOrbitVisible) {
+                isLyricsVisible = false;
+                rvLyrics.setVisibility(View.GONE);
                 planetQueueView.setVisibility(View.VISIBLE);
+                btnToggleOrbit.setImageTintList(ColorStateList.valueOf(getColor(R.color.accent_mars)));
+                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
                 if (audioService != null) {
                     planetQueueView.setQueue(audioService.getQueue(), audioService.getCurrentIndex());
                 }
             } else {
                 planetQueueView.setVisibility(View.GONE);
-                artworkContainer.setVisibility(View.VISIBLE);
+                btnToggleOrbit.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
             }
         });
 
@@ -312,19 +348,15 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             }
         });
 
-        curvedArcSeekBar.setOnSeekBarChangeListener(new CurvedArcSeekBar.OnSeekBarChangeListener() {
+        marsCurvedEdgeSeekBar.setOnSeekBarChangeListener(new MarsCurvedEdgeSeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(CurvedArcSeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser && audioService != null) {
-                    tvCurrentTime.setText(CurvedArcSeekBar.formatDuration(progress));
-                }
-            }
+            public void onProgressChanged(MarsCurvedEdgeSeekBar seekBar, int progress, boolean fromUser) {}
 
             @Override
-            public void onStartTrackingTouch(CurvedArcSeekBar seekBar) {}
+            public void onStartTrackingTouch(MarsCurvedEdgeSeekBar seekBar) {}
 
             @Override
-            public void onStopTrackingTouch(CurvedArcSeekBar seekBar) {
+            public void onStopTrackingTouch(MarsCurvedEdgeSeekBar seekBar) {
                 if (audioService != null) {
                     audioService.seekTo(seekBar.getProgress());
                 }
@@ -411,7 +443,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         if (!playlistSongs.isEmpty()) {
             playSongFromList(playlistSongs, 0);
         } else {
-            // Play all if empty
             if (!songList.isEmpty()) {
                 playSongFromList(songList, 0);
             }
@@ -424,33 +455,56 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         runOnUiThread(() -> {
             pagerAdapter.getSongsFragment().setActiveSongId(song.getId());
 
-            // Top Paddle update
+            // Top Paddle
             tvPaddleTitle.setText(song.getTitle());
             tvPaddleArtist.setText(song.getArtist());
-            Glide.with(this).load(song.getAlbumArtUri()).placeholder(R.drawable.ic_music_minimal).into(ivPaddleArt);
+            AlbumArtHelper.loadIntoImageView(ivPaddleArt, song, 12);
             showTopPaddleWithAnimation();
 
-            // Mini player update
+            // Mini player
             miniPlayer.setVisibility(View.VISIBLE);
             tvMiniTitle.setText(song.getTitle());
             tvMiniArtist.setText(song.getArtist());
-            Glide.with(this).load(song.getAlbumArtUri()).placeholder(R.drawable.ic_music_minimal).into(ivMiniArt);
+            AlbumArtHelper.loadIntoImageView(ivMiniArt, song, 12);
 
-            // Full Mars player update
+            // Mars curved full player
             tvPlayerTitle.setText(song.getTitle());
             tvPlayerArtist.setText(song.getArtist());
             tvPlayerTopTitle.setText(song.getAlbum());
-            Glide.with(this).load(song.getAlbumArtUri()).placeholder(R.drawable.ic_music_minimal).into(ivPlayerArt);
+            AlbumArtHelper.loadIntoImageView(ivPlayerArt, song, 0);
 
-            curvedArcSeekBar.setMax((int) song.getDuration());
-            curvedArcSeekBar.setProgress(0);
-            tvTotalTime.setText(CurvedArcSeekBar.formatDuration(song.getDuration()));
-            tvCurrentTime.setText("00:00");
+            marsCurvedEdgeSeekBar.setMax((int) song.getDuration());
+            marsCurvedEdgeSeekBar.setProgress(0);
 
             if (planetQueueView != null && audioService != null) {
                 planetQueueView.setQueue(audioService.getQueue(), index);
             }
+
+            // Load Synchronized Lyrics
+            loadLyricsForCurrentSong(song);
         });
+    }
+
+    private void loadLyricsForCurrentSong(Song song) {
+        new Thread(() -> {
+            List<LyricLine> lyrics = LyricsHelper.loadLyricsForSong(song);
+            runOnUiThread(() -> {
+                currentLyrics = lyrics;
+                lyricsAdapter.setLyrics(lyrics);
+                if (lyrics != null && !lyrics.isEmpty()) {
+                    btnToggleLyrics.setVisibility(View.VISIBLE);
+                    tvCurrentLyricLine.setVisibility(View.VISIBLE);
+                    tvCurrentLyricLine.setText(lyrics.get(0).getText());
+                } else {
+                    btnToggleLyrics.setVisibility(View.GONE);
+                    tvCurrentLyricLine.setVisibility(View.GONE);
+                    if (isLyricsVisible) {
+                        isLyricsVisible = false;
+                        rvLyrics.setVisibility(View.GONE);
+                    }
+                }
+            });
+        }).start();
     }
 
     private void showTopPaddleWithAnimation() {
@@ -477,18 +531,30 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     @Override
     public void onProgress(int position, int duration) {
         runOnUiThread(() -> {
-            curvedArcSeekBar.setMax(duration);
-            curvedArcSeekBar.setProgress(position);
-            tvCurrentTime.setText(CurvedArcSeekBar.formatDuration(position));
-            tvTotalTime.setText(CurvedArcSeekBar.formatDuration(duration));
+            marsCurvedEdgeSeekBar.setMax(duration);
+            marsCurvedEdgeSeekBar.setProgress(position);
+
+            // Update Synchronized Lyrics real-time line
+            if (currentLyrics != null && !currentLyrics.isEmpty()) {
+                int activeIdx = LyricsHelper.getActiveLyricIndex(currentLyrics, position);
+                if (activeIdx >= 0 && activeIdx < currentLyrics.size()) {
+                    lyricsAdapter.setActiveIndex(activeIdx);
+                    tvCurrentLyricLine.setText(currentLyrics.get(activeIdx).getText());
+                    if (isLyricsVisible) {
+                        rvLyrics.smoothScrollToPosition(activeIdx);
+                    }
+                }
+            }
         });
     }
 
     @Override
     public void onDynamicColorChanged(int color) {
         runOnUiThread(() -> {
-            curvedArcSeekBar.setActiveColor(color);
+            marsCurvedEdgeSeekBar.setActiveColor(color);
             planetQueueView.setActiveColor(color);
+            lyricsAdapter.setActiveColor(color);
+            tvCurrentLyricLine.setTextColor(color);
             btnPlayPauseWrapper.setBackgroundTintList(ColorStateList.valueOf(color));
         });
     }
@@ -501,13 +567,21 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
                 audioService.isRepeat() ? getColor(R.color.accent_mars) : getColor(R.color.text_muted)));
     }
 
-    private float dp(float val) {
-        return val * getResources().getDisplayMetrics().density;
-    }
-
     @Override
     public void onBackPressed() {
         if (fullPlayerLayout.getVisibility() == View.VISIBLE) {
+            if (isLyricsVisible) {
+                isLyricsVisible = false;
+                rvLyrics.setVisibility(View.GONE);
+                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
+                return;
+            }
+            if (isOrbitVisible) {
+                isOrbitVisible = false;
+                planetQueueView.setVisibility(View.GONE);
+                btnToggleOrbit.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
+                return;
+            }
             closeFullPlayer();
         } else {
             super.onBackPressed();
