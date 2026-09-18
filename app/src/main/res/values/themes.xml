@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RafaPlay" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent_mars</item>
+        <item name="colorPrimaryVariant">@color/surface_dark</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+        <item name="colorSecondary">@color/accent_mars</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <style name="ShapeAppearance.Rounded12" parent="">
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearance.RoundedCapsule" parent="">
+        <item name="cornerSize">140dp</item>
+    </style>
+
+    <style name="ShapeAppearance.RoundedSquare" parent="">
+        <item name="cornerSize">28dp</item>
+    </style>
+</resources>

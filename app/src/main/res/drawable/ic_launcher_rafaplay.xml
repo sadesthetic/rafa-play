@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#0B0B0E"
+        android:pathData="M0,0h108v108h-108z"/>
+    <!-- Outer cosmic orbit ring -->
+    <path
+        android:strokeColor="#FF453A"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:pathData="M 18,54 A 36,36 0 1,1 90,54 A 36,36 0 1,1 18,54" />
+    <!-- Elliptical tilted orbit ring -->
+    <path
+        android:strokeColor="#50FF453A"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:pathData="M 14,46 C 22,26 86,26 94,62 C 102,98 6,82 14,46 Z" />
+    <!-- Minimalist line Play note -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M 46,38 L 68,54 L 46,70 Z" />
+    <!-- Small orbiting planet dot -->
+    <path
+        android:fillColor="#FF453A"
+        android:pathData="M 86,36 A 3.5,3.5 0 1,1 86,35.9 Z" />
+</vector>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#000000</color>
+    <color name="surface_dark">#0B0B0E</color>
+    <color name="surface_card">#16161C</color>
+    <color name="surface_card_border">#23232C</color>
+    <color name="accent_mars">#FF453A</color>
+    <color name="accent_mars_glow">#40FF453A</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#8E8E93</color>
+    <color name="text_muted">#48484A</color>
+    <color name="orbit_ring">#1F1F28</color>
+    <color name="orbit_active">#FF453A</color>
+    <color name="paddle_bg">#181820</color>
+    <color name="paddle_border">#2C2C38</color>
+</resources>
