@@ -23,6 +23,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -141,6 +142,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         initViews();
         setupTabs();
         setupSearch();
+        setupUpdater();
         setupPaddle();
         setupMiniPlayer();
         setupFullPlayer();
@@ -257,6 +259,41 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
 
             @Override
             public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void setupUpdater() {
+        ImageButton btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
+        btnCheckUpdate.setOnClickListener(v -> {
+            btnCheckUpdate.animate().rotationBy(360).setDuration(600).start();
+            com.rafa.play.util.AppUpdater.checkUpdate(this, true, new com.rafa.play.util.AppUpdater.UpdateCheckCallback() {
+                @Override
+                public void onUpdateAvailable(String newVersion, String apkDownloadUrl, String releaseNotes) {
+                    com.rafa.play.util.AppUpdater.showUpdateDialog(MainActivity.this, newVersion, apkDownloadUrl);
+                }
+
+                @Override
+                public void onNoUpdate() {}
+
+                @Override
+                public void onError(String error) {
+                    Toast.makeText(MainActivity.this, "Error al comprobar actualizaciones", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        // Automatic background check on start
+        com.rafa.play.util.AppUpdater.checkUpdate(this, false, new com.rafa.play.util.AppUpdater.UpdateCheckCallback() {
+            @Override
+            public void onUpdateAvailable(String newVersion, String apkDownloadUrl, String releaseNotes) {
+                com.rafa.play.util.AppUpdater.showUpdateDialog(MainActivity.this, newVersion, apkDownloadUrl);
+            }
+
+            @Override
+            public void onNoUpdate() {}
+
+            @Override
+            public void onError(String error) {}
         });
     }
 
