@@ -465,6 +465,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         if (audioService != null) {
             audioService.setPlaylist(songs, position);
         }
+        openFullPlayer();
     }
 
     public void playPlaylist(Playlist playlist) {
