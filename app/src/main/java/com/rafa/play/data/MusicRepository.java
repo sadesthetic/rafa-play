@@ -41,7 +41,8 @@ public class MusicRepository {
                 MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.DURATION,
                 MediaStore.Audio.Media.DATA,
-                MediaStore.Audio.Media.ALBUM_ID
+                MediaStore.Audio.Media.ALBUM_ID,
+                MediaStore.Audio.Media.DATE_ADDED
         };
 
         String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0 AND " + MediaStore.Audio.Media.DURATION + " >= 10000";
@@ -56,6 +57,7 @@ public class MusicRepository {
                 int durCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION);
                 int dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
                 int albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID);
+                int dateCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED);
 
                 do {
                     long id = cursor.getLong(idCol);
@@ -65,8 +67,9 @@ public class MusicRepository {
                     long duration = cursor.getLong(durCol);
                     String data = cursor.getString(dataCol);
                     long albumId = cursor.getLong(albumIdCol);
+                    long dateAdded = cursor.getLong(dateCol);
 
-                    songs.add(new Song(id, title, artist, album, duration, data, albumId));
+                    songs.add(new Song(id, title, artist, album, duration, data, albumId, dateAdded));
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
@@ -159,5 +162,45 @@ public class MusicRepository {
             }
         }
         savePlaylists(list);
+    }
+
+    public List<Song> getRecentlyAddedSongs(List<Song> allSongs) {
+        if (allSongs == null || allSongs.isEmpty()) return new ArrayList<>();
+        List<Song> sorted = new ArrayList<>(allSongs);
+        sorted.sort((a, b) -> Long.compare(b.getDateAdded(), a.getDateAdded()));
+        if (sorted.size() > 50) return new ArrayList<>(sorted.subList(0, 50));
+        return sorted;
+    }
+
+    public List<Song> getHistorySongs(List<Song> allSongs) {
+        if (allSongs == null || allSongs.isEmpty()) return new ArrayList<>();
+        PlaybackStatsManager stats = new PlaybackStatsManager(context);
+        List<Long> historyIds = stats.getHistoryIds();
+        java.util.Map<Long, Song> map = new java.util.HashMap<>();
+        for (Song s : allSongs) {
+            map.put(s.getId(), s);
+        }
+        List<Song> result = new ArrayList<>();
+        for (Long id : historyIds) {
+            Song s = map.get(id);
+            if (s != null) result.add(s);
+        }
+        return result;
+    }
+
+    public List<Song> getMostPlayedSongs(List<Song> allSongs) {
+        if (allSongs == null || allSongs.isEmpty()) return new ArrayList<>();
+        PlaybackStatsManager stats = new PlaybackStatsManager(context);
+        List<Long> topIds = stats.getMostPlayedIds();
+        java.util.Map<Long, Song> map = new java.util.HashMap<>();
+        for (Song s : allSongs) {
+            map.put(s.getId(), s);
+        }
+        List<Song> result = new ArrayList<>();
+        for (Long id : topIds) {
+            Song s = map.get(id);
+            if (s != null) result.add(s);
+        }
+        return result;
     }
 }

@@ -429,21 +429,29 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     }
 
     private void checkPermissionsAndLoad() {
-        String perm = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                ? Manifest.permission.READ_MEDIA_AUDIO
-                : Manifest.permission.READ_EXTERNAL_STORAGE;
-
-        if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{perm}, PERMISSION_REQ_CODE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{
+                        Manifest.permission.READ_MEDIA_AUDIO,
+                        Manifest.permission.READ_MEDIA_IMAGES
+                }, PERMISSION_REQ_CODE);
+            } else {
+                loadSongs();
+            }
         } else {
-            loadSongs();
+            String perm = Manifest.permission.READ_EXTERNAL_STORAGE;
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{perm}, PERMISSION_REQ_CODE);
+            } else {
+                loadSongs();
+            }
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQ_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (requestCode == PERMISSION_REQ_CODE) {
             loadSongs();
         }
     }
@@ -453,6 +461,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             songList = repository.loadSongs();
             runOnUiThread(() -> {
                 pagerAdapter.getSongsFragment().setSongs(songList);
+                pagerAdapter.getPlaylistsFragment().loadPlaylists();
             });
         }).start();
     }
@@ -490,8 +499,12 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     @Override
     public void onTrackChanged(Song song, int index) {
         if (song == null) return;
+        new com.rafa.play.data.PlaybackStatsManager(this).recordSongPlay(song.getId());
         runOnUiThread(() -> {
             pagerAdapter.getSongsFragment().setActiveSongId(song.getId());
+            if (pagerAdapter.getPlaylistsFragment() != null) {
+                pagerAdapter.getPlaylistsFragment().loadPlaylists();
+            }
 
             // Top Paddle
             tvPaddleTitle.setText(song.getTitle());

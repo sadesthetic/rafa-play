@@ -23,7 +23,6 @@
         android:layout_height="38dp"
         android:scaleType="centerCrop"
         android:src="@drawable/ic_music_minimal"
-        android:tint="@color/text_secondary"
         android:background="@color/surface_card"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Rounded12" />
 

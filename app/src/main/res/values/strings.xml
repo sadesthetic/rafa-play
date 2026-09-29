@@ -15,4 +15,9 @@
     <string name="cancel">Cancelar</string>
     <string name="empty_songs">No se encontraron archivos de audio</string>
     <string name="empty_playlists">No hay listas creadas</string>
+    <string name="section_history">Historial</string>
+    <string name="section_top">Más escuchadas</string>
+    <string name="section_recent">Agregadas recientemente</string>
+    <string name="play_all">Reproducir todo</string>
+    <string name="empty_section">Sin canciones</string>
 </resources>

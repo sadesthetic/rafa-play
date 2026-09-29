@@ -4,6 +4,7 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -23,6 +24,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.Playli
 
     public interface OnPlaylistClickListener {
         void onPlaylistClick(Playlist playlist);
+        void onPlaylistPlayClick(Playlist playlist);
     }
 
     public PlaylistAdapter(Context context, OnPlaylistClickListener listener) {
@@ -57,6 +59,12 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.Playli
                 listener.onPlaylistClick(playlist);
             }
         });
+
+        holder.btnQuickPlay.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onPlaylistPlayClick(playlist);
+            }
+        });
     }
 
     @Override
@@ -67,11 +75,13 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.Playli
     static class PlaylistViewHolder extends RecyclerView.ViewHolder {
         TextView tvName;
         TextView tvCount;
+        ImageView btnQuickPlay;
 
         PlaylistViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tvPlaylistName);
             tvCount = itemView.findViewById(R.id.tvSongCount);
+            btnQuickPlay = itemView.findViewById(R.id.btnQuickPlay);
         }
     }
 }
