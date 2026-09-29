@@ -114,7 +114,8 @@
         android:layout_marginBottom="-28dp" />
 
     <!-- Bottom Half: Metadata, Live Lyric Preview, and Playback Controls -->
-    <LinearLayout
+    <com.rafa.play.views.PlayerBottomLayout
+        android:id="@+id/playerBottomContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/marsCurvedEdgeSeekBar"
@@ -224,6 +225,6 @@
 
         </LinearLayout>
 
-    </LinearLayout>
+    </com.rafa.play.views.PlayerBottomLayout>
 
 </RelativeLayout>

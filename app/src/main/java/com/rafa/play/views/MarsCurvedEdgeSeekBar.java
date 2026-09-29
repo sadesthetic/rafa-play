@@ -119,6 +119,15 @@ public class MarsCurvedEdgeSeekBar extends View {
         }
     }
 
+    public void setScrubbing(boolean scrubbing) {
+        this.isDragging = scrubbing;
+    }
+
+    public void setScrubProgress(int progress) {
+        this.progress = Math.max(0, Math.min(progress, max));
+        invalidate();
+    }
+
     public int getProgress() {
         return progress;
     }

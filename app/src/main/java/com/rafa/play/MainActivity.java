@@ -344,6 +344,43 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         marsCurvedHeader.setOnTouchListener(playerSwipeListener);
         ivPlayerArt.setOnTouchListener(playerSwipeListener);
 
+        com.rafa.play.views.PlayerBottomLayout playerBottomContainer = findViewById(R.id.playerBottomContainer);
+        if (playerBottomContainer != null) {
+            playerBottomContainer.setOnScrubListener(new com.rafa.play.views.PlayerBottomLayout.OnScrubListener() {
+                private int initialProgress = 0;
+                private int targetProgress = 0;
+
+                @Override
+                public void onScrubStart() {
+                    initialProgress = marsCurvedEdgeSeekBar.getProgress();
+                    targetProgress = initialProgress;
+                    marsCurvedEdgeSeekBar.setScrubbing(true);
+                }
+
+                @Override
+                public void onScrub(float deltaX, float totalWidth) {
+                    if (totalWidth <= 0) return;
+                    float ratio = deltaX / totalWidth;
+                    int deltaProgress = (int) (ratio * marsCurvedEdgeSeekBar.getMax());
+                    targetProgress = Math.max(0, Math.min(marsCurvedEdgeSeekBar.getMax(), initialProgress + deltaProgress));
+                    marsCurvedEdgeSeekBar.setScrubProgress(targetProgress);
+                }
+
+                @Override
+                public void onScrubEnd() {
+                    marsCurvedEdgeSeekBar.setScrubbing(false);
+                    if (audioService != null) {
+                        audioService.seekTo(targetProgress);
+                    }
+                }
+
+                @Override
+                public void onSwipeDown() {
+                    closeFullPlayer();
+                }
+            });
+        }
+
         btnPlayerPlayPause.setOnClickListener(v -> {
             if (audioService != null) audioService.togglePlayPause();
         });
