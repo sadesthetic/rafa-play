@@ -18,40 +18,73 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ArtworkSearchHelper {
 
-    public interface CoverCallback {
-        void onCoverFound(Bitmap bitmap, String coverUrl);
+    public static class TrackMetadataSuggestion {
+        public final String title;
+        public final String artist;
+
+        public TrackMetadataSuggestion(String title, String artist) {
+            this.title = title;
+            this.artist = artist;
+        }
+    }
+
+    public interface MultiCoverCallback {
+        void onCoversFound(List<Bitmap> bitmaps, TrackMetadataSuggestion suggestedMeta);
         void onNoCover();
         void onError(String message);
     }
 
-    public static void searchCover(Context context, String title, String artist, CoverCallback callback) {
+    public static void searchCovers(Context context, String title, String artist, MultiCoverCallback callback) {
         new Thread(() -> {
             try {
                 List<String> queries = buildSearchQueries(title, artist);
-                String foundUrl = null;
+                Set<String> imageUrls = new LinkedHashSet<>();
+                TrackMetadataSuggestion[] metaResult = new TrackMetadataSuggestion[1];
 
                 for (String q : queries) {
                     if (q == null || q.trim().isEmpty()) continue;
-                    foundUrl = tryItunesSearch(q.trim());
-                    if (foundUrl != null) break;
+                    fetchItunesResults(q.trim(), imageUrls, metaResult);
+                    if (imageUrls.size() >= 3) break;
                 }
 
-                if (foundUrl == null) {
-                    new Handler(Looper.getMainLooper()).post(callback::onNoCover);
+                // Fallback adicional con MusicBrainz si el artista sigue desconocido
+                if ((metaResult[0] == null || metaResult[0].artist.equalsIgnoreCase("Desconocido")) && !title.isEmpty()) {
+                    fetchMusicBrainzMetadata(title, metaResult);
+                }
+
+                if (imageUrls.isEmpty()) {
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        if (metaResult[0] != null) {
+                            callback.onCoversFound(new ArrayList<>(), metaResult[0]);
+                        } else {
+                            callback.onNoCover();
+                        }
+                    });
                     return;
                 }
 
-                Bitmap bmp = downloadBitmap(foundUrl);
-                if (bmp != null) {
-                    String finalFoundUrl = foundUrl;
-                    new Handler(Looper.getMainLooper()).post(() -> callback.onCoverFound(bmp, finalFoundUrl));
-                } else {
-                    new Handler(Looper.getMainLooper()).post(callback::onNoCover);
+                List<Bitmap> bitmaps = new ArrayList<>();
+                for (String url : imageUrls) {
+                    Bitmap bmp = downloadBitmap(url);
+                    if (bmp != null) {
+                        bitmaps.add(bmp);
+                    }
+                    if (bitmaps.size() >= 3) break;
                 }
+
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    if (!bitmaps.isEmpty() || metaResult[0] != null) {
+                        callback.onCoversFound(bitmaps, metaResult[0]);
+                    } else {
+                        callback.onNoCover();
+                    }
+                });
 
             } catch (Exception e) {
                 new Handler(Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
@@ -61,7 +94,6 @@ public class ArtworkSearchHelper {
 
     private static List<String> buildSearchQueries(String rawTitle, String rawArtist) {
         List<String> list = new ArrayList<>();
-
         String cleanTitle = cleanSearchTerm(rawTitle);
         String cleanArtist = cleanSearchTerm(rawArtist);
 
@@ -74,7 +106,7 @@ public class ArtworkSearchHelper {
             mainArtist = cleanArtist.split("feat\\.")[0].trim();
         }
 
-        // 1. Título limpio + Artista principal
+        // 1. Título limpio + Artista
         if (!mainArtist.isEmpty() && !mainArtist.equalsIgnoreCase("Desconocido")) {
             list.add(cleanTitle + " " + mainArtist);
         }
@@ -100,20 +132,19 @@ public class ArtworkSearchHelper {
 
     private static String cleanSearchTerm(String text) {
         if (text == null) return "";
-        String s = text.replaceAll("(?i)\\([^\\)]*\\)", "")
+        return text.replaceAll("(?i)\\([^\\)]*\\)", "")
                 .replaceAll("(?i)\\[[^\\]]*\\]", "")
                 .replaceAll("(?i)feat\\.?.*", "")
                 .replaceAll("(?i)ft\\.?.*", "")
                 .replaceAll("[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-        return s;
     }
 
-    private static String tryItunesSearch(String query) {
+    private static void fetchItunesResults(String query, Set<String> outUrls, TrackMetadataSuggestion[] outMeta) {
         try {
             String encoded = URLEncoder.encode(query, "UTF-8");
-            String endpoint = "https://itunes.apple.com/search?term=" + encoded + "&media=music&entity=song&limit=3";
+            String endpoint = "https://itunes.apple.com/search?term=" + encoded + "&media=music&entity=song&limit=6";
 
             URL url = new URL(endpoint);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -135,15 +166,69 @@ public class ArtworkSearchHelper {
                     JSONArray results = json.getJSONArray("results");
                     for (int i = 0; i < results.length(); i++) {
                         JSONObject item = results.getJSONObject(i);
+
+                        // Capture first clean metadata match if not set
+                        if (outMeta[0] == null) {
+                            String tName = item.optString("trackName", "");
+                            String aName = item.optString("artistName", "");
+                            if (!tName.isEmpty() && !aName.isEmpty()) {
+                                outMeta[0] = new TrackMetadataSuggestion(tName, aName);
+                            }
+                        }
+
                         String art = item.optString("artworkUrl100", null);
                         if (art != null && !art.isEmpty()) {
-                            return art.replace("100x100bb", "600x600bb");
+                            outUrls.add(art.replace("100x100bb", "600x600bb"));
+                            if (outUrls.size() >= 3) break;
                         }
                     }
                 }
             }
         } catch (Exception ignored) {}
-        return null;
+    }
+
+    private static void fetchMusicBrainzMetadata(String title, TrackMetadataSuggestion[] outMeta) {
+        try {
+            String clean = cleanSearchTerm(title);
+            String encoded = URLEncoder.encode("recording:\"" + clean + "\"", "UTF-8");
+            String endpoint = "https://musicbrainz.org/ws/2/recording/?query=" + encoded + "&fmt=json&limit=1";
+
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "RafaPlay/2.0 (contact@rafaplay.app)");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            if (conn.getResponseCode() == 200) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                reader.close();
+
+                JSONObject json = new JSONObject(sb.toString());
+                JSONArray recs = json.optJSONArray("recordings");
+                if (recs != null && recs.length() > 0) {
+                    JSONObject first = recs.getJSONObject(0);
+                    String recTitle = first.optString("title", title);
+                    JSONArray artists = first.optJSONArray("artist-credit");
+                    if (artists != null && artists.length() > 0) {
+                        StringBuilder artBuilder = new StringBuilder();
+                        for (int j = 0; j < artists.length(); j++) {
+                            JSONObject aObj = artists.getJSONObject(j);
+                            artBuilder.append(aObj.optString("name", ""));
+                            String join = aObj.optString("joinphrase", "");
+                            artBuilder.append(join);
+                        }
+                        String artistStr = artBuilder.toString().trim();
+                        if (!artistStr.isEmpty()) {
+                            outMeta[0] = new TrackMetadataSuggestion(recTitle, artistStr);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private static Bitmap downloadBitmap(String src) {

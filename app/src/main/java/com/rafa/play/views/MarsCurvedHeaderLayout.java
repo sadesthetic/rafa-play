@@ -68,13 +68,28 @@ public class MarsCurvedHeaderLayout extends FrameLayout {
         float height = h;
         float baseEdgeY = height - curveDepth;
 
-        // Path starts at top left (0, 0), covers full top, and dips at bottom
-        clipPath.moveTo(0, 0);
-        clipPath.lineTo(width, 0);
+        float topRadius = dp(36); // Smooth harmonious top curvature on sides
+
+        // Starts after top-left corner
+        clipPath.moveTo(topRadius, 0);
+
+        // Top line
+        clipPath.lineTo(width - topRadius, 0);
+
+        // Top-right corner curve
+        clipPath.quadTo(width, 0, width, topRadius);
+
+        // Right edge down to bottom base
         clipPath.lineTo(width, baseEdgeY);
 
-        // Curve dipping in the center towards bottom
+        // Signature Mars bottom curve dipping in the center
         clipPath.quadTo(width / 2f, height, 0, baseEdgeY);
+
+        // Left edge up to top-left corner
+        clipPath.lineTo(0, topRadius);
+
+        // Top-left corner curve
+        clipPath.quadTo(0, 0, topRadius, 0);
 
         clipPath.close();
 

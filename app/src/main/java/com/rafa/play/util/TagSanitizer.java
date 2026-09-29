@@ -41,7 +41,9 @@ public class TagSanitizer {
             "(?i)y2mate(\\.[a-z]{2,4})?\\s*(-)?",
             "(?i)mp3clan(\\.[a-z]{2,4})?\\s*(-)?",
             "(?i)snaptube(\\.[a-z]{2,4})?\\s*(-)?",
-            "(?i)descargarmusica[^\\]\\)]*"
+            "(?i)descargarmusica[^\\]\\)]*",
+            "(?i)[\\(_\\[\\-\\s]*\\d{5,}[\\)_\\]\\-\\s]*", // Elimina secuencias largas de números como 1091328993
+            "(?i)^\\d{1,3}\\s*[-–—\\.]\\s*" // Elimina número de pista al inicio (ej. 01 - Song)
     };
 
     public static CleanResult clean(String rawTitle, String rawArtist, String filePath) {

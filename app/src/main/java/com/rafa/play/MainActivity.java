@@ -668,8 +668,14 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         TextView tvStatus = dialog.findViewById(R.id.tvCoverStatus);
         View btnFindCover = dialog.findViewById(R.id.btnFindCover);
         View btnSmartClean = dialog.findViewById(R.id.btnSmartClean);
+        TextView btnToggleSlowed = dialog.findViewById(R.id.btnToggleSlowed);
         View btnCancel = dialog.findViewById(R.id.btnCancelTag);
         View btnSave = dialog.findViewById(R.id.btnSaveTag);
+
+        View layoutCoverChoices = dialog.findViewById(R.id.layoutCoverChoices);
+        ImageView ivChoice1 = dialog.findViewById(R.id.ivChoice1);
+        ImageView ivChoice2 = dialog.findViewById(R.id.ivChoice2);
+        ImageView ivChoice3 = dialog.findViewById(R.id.ivChoice3);
 
         etTitle.setText(song.getTitle());
         etArtist.setText(song.getArtist());
@@ -677,12 +683,32 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
 
         final android.graphics.Bitmap[] suggestedBitmap = new android.graphics.Bitmap[1];
 
+        // Shortcut botón (Slowed): añade o quita con un toque
+        Runnable updateSlowedBtnStyle = () -> {
+            String currentTitle = etTitle.getText().toString();
+            boolean hasSlowed = currentTitle.toLowerCase().contains("slowed");
+            btnToggleSlowed.setTextColor(getColor(hasSlowed ? R.color.accent_mars : R.color.text_secondary));
+        };
+        updateSlowedBtnStyle.run();
+
+        btnToggleSlowed.setOnClickListener(v -> {
+            String t = etTitle.getText().toString().trim();
+            if (t.matches("(?i).*\\s*\\(slowed\\)\\s*$")) {
+                t = t.replaceAll("(?i)\\s*\\(slowed\\)\\s*$", "").trim();
+            } else {
+                t = t + " (Slowed)";
+            }
+            etTitle.setText(t);
+            updateSlowedBtnStyle.run();
+        });
+
         btnSmartClean.setOnClickListener(v -> {
             btnSmartClean.animate().rotationBy(360).setDuration(400).start();
             com.rafa.play.util.TagSanitizer.CleanResult result =
                     com.rafa.play.util.TagSanitizer.clean(etTitle.getText().toString(), etArtist.getText().toString(), song.getData());
             etTitle.setText(result.title);
             etArtist.setText(result.artist);
+            updateSlowedBtnStyle.run();
             Toast.makeText(this, "Etiquetas organizadas", Toast.LENGTH_SHORT).show();
         });
 
@@ -690,16 +716,48 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             String qTitle = etTitle.getText().toString().trim();
             String qArtist = etArtist.getText().toString().trim();
             pbLoading.setVisibility(View.VISIBLE);
-            tvStatus.setText("Buscando en la web...");
+            layoutCoverChoices.setVisibility(View.GONE);
+            tvStatus.setText("Buscando portadas e información...");
 
-            com.rafa.play.util.ArtworkSearchHelper.searchCover(this, qTitle, qArtist, new com.rafa.play.util.ArtworkSearchHelper.CoverCallback() {
+            com.rafa.play.util.ArtworkSearchHelper.searchCovers(this, qTitle, qArtist, new com.rafa.play.util.ArtworkSearchHelper.MultiCoverCallback() {
                 @Override
-                public void onCoverFound(android.graphics.Bitmap bitmap, String coverUrl) {
+                public void onCoversFound(java.util.List<android.graphics.Bitmap> bitmaps, com.rafa.play.util.ArtworkSearchHelper.TrackMetadataSuggestion suggestedMeta) {
                     pbLoading.setVisibility(View.GONE);
-                    suggestedBitmap[0] = bitmap;
-                    ivDialogArt.setImageTintList(null);
-                    ivDialogArt.setImageBitmap(bitmap);
-                    tvStatus.setText("Portada sugerida encontrada");
+
+                    // Si encontramos metadatos en línea y el artista era desconocido, autocompletar
+                    if (suggestedMeta != null) {
+                        String curArtist = etArtist.getText().toString().trim();
+                        if (curArtist.isEmpty() || curArtist.equalsIgnoreCase("Desconocido")) {
+                            etArtist.setText(suggestedMeta.artist);
+                        }
+                    }
+
+                    if (bitmaps != null && !bitmaps.isEmpty()) {
+                        suggestedBitmap[0] = bitmaps.get(0);
+                        ivDialogArt.setImageTintList(null);
+                        ivDialogArt.setImageBitmap(bitmaps.get(0));
+
+                        tvStatus.setText("Encontradas " + bitmaps.size() + " portadas");
+
+                        // Configurar miniaturas para elegir
+                        layoutCoverChoices.setVisibility(View.VISIBLE);
+                        ImageView[] views = {ivChoice1, ivChoice2, ivChoice3};
+                        for (int i = 0; i < 3; i++) {
+                            if (i < bitmaps.size()) {
+                                android.graphics.Bitmap b = bitmaps.get(i);
+                                views[i].setVisibility(View.VISIBLE);
+                                views[i].setImageBitmap(b);
+                                views[i].setOnClickListener(cv -> {
+                                    suggestedBitmap[0] = b;
+                                    ivDialogArt.setImageBitmap(b);
+                                });
+                            } else {
+                                views[i].setVisibility(View.GONE);
+                            }
+                        }
+                    } else {
+                        tvStatus.setText("Información actualizada");
+                    }
                 }
 
                 @Override

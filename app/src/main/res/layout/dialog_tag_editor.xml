@@ -33,7 +33,128 @@
             app:tint="@color/accent_mars" />
     </RelativeLayout>
 
-    <!-- Cover Section with Suggestion button -->
+    <!-- Cover Section with Suggestion button and 3 thumbnails -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivDialogArt"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/surface_card"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_music_minimal"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Rounded12" />
+
+                <ProgressBar
+                    android:id="@+id/pbCoverLoading"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:indeterminateTint="@color/accent_mars"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/btnFindCover"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/shape_search_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="12dp"
+                    android:paddingTop="7dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="7dp"
+                    android:text="Buscar portadas e info"
+                    android:textColor="@color/accent_mars"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvCoverStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 3 Cover Choices Selection Row -->
+        <LinearLayout
+            android:id="@+id/layoutCoverChoices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Elige:"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivChoice1"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/shape_search_bg"
+                android:scaleType="centerCrop"
+                android:clickable="true"
+                android:focusable="true"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Rounded12" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivChoice2"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/shape_search_bg"
+                android:scaleType="centerCrop"
+                android:clickable="true"
+                android:focusable="true"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Rounded12" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivChoice3"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/shape_search_bg"
+                android:scaleType="centerCrop"
+                android:clickable="true"
+                android:focusable="true"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Rounded12" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Title Label and (Slowed) quick toggle shortcut button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -41,68 +162,30 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <FrameLayout
-            android:layout_width="68dp"
-            android:layout_height="68dp">
-
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivDialogArt"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@color/surface_card"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_music_minimal"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Rounded12" />
-
-            <ProgressBar
-                android:id="@+id/pbCoverLoading"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:layout_gravity="center"
-                android:indeterminateTint="@color/accent_mars"
-                android:visibility="gone" />
-        </FrameLayout>
-
-        <LinearLayout
+        <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:text="Título de la canción"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
 
-            <TextView
-                android:id="@+id/btnFindCover"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/shape_search_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:paddingStart="12dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="12dp"
-                android:paddingBottom="8dp"
-                android:text="Buscar portada"
-                android:textColor="@color/accent_mars"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvCoverStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp" />
-        </LinearLayout>
+        <!-- Minimalist Shortcut toggle button for (Slowed) -->
+        <TextView
+            android:id="@+id/btnToggleSlowed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/shape_search_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="10dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="3dp"
+            android:text="(Slowed)"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
     </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Título de la canción"
-        android:textColor="@color/text_secondary"
-        android:textSize="12sp" />
 
     <EditText
         android:id="@+id/etTitle"

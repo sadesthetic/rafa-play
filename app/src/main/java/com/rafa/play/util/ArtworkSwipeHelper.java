@@ -84,17 +84,17 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                 if (isHorizontalDrag) {
                     targetArt.setTranslationX(dx);
                     float w = targetArt.getWidth() > 0 ? targetArt.getWidth() : 600f;
-                    float progress = Math.min(1.0f, absDx / w);
 
-                    targetArt.setAlpha(1.0f - progress * 0.45f);
-
-                    // Dirección de arrastre: dx < 0 -> next, dx > 0 -> prev
+                    // Dirección de arrastre: dx < 0 -> next (viene de la derecha), dx > 0 -> prev (viene de la izquierda)
                     int dir = dx < 0 ? -1 : 1;
                     if (dir != currentDirection && incomingArt != null && callback != null) {
                         currentDirection = dir;
                         Song peekSong = (dir == -1) ? callback.getNextSong() : callback.getPrevSong();
                         if (peekSong != null) {
                             AlbumArtHelper.loadIntoImageView(incomingArt, peekSong, 0);
+                            incomingArt.setAlpha(1.0f);
+                            incomingArt.setScaleX(1.0f);
+                            incomingArt.setScaleY(1.0f);
                             incomingArt.setVisibility(View.VISIBLE);
                         } else {
                             incomingArt.setVisibility(View.GONE);
@@ -102,13 +102,10 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                     }
 
                     if (incomingArt != null && incomingArt.getVisibility() == View.VISIBLE) {
-                        // El cover entrante hace parallax desde el fondo
-                        float incomingOffset = (dir == -1) ? (w * 0.25f * (1.0f - progress)) : (-w * 0.25f * (1.0f - progress));
+                        // El cover entrante se posiciona exactamente pegado al borde (sin transparencias superpuestas)
+                        float incomingOffset = (dir == -1) ? (w + dx) : (-w + dx);
                         incomingArt.setTranslationX(incomingOffset);
-                        incomingArt.setAlpha(0.35f + progress * 0.65f);
-                        float scale = 0.90f + progress * 0.10f;
-                        incomingArt.setScaleX(scale);
-                        incomingArt.setScaleY(scale);
+                        incomingArt.setAlpha(1.0f);
                     }
 
                     return true;
@@ -135,17 +132,13 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                     if (flingNext) {
                         targetArt.animate()
                                 .translationX(-w)
-                                .alpha(0f)
-                                .setDuration(160)
+                                .setDuration(170)
                                 .start();
 
                         if (incomingArt != null && incomingArt.getVisibility() == View.VISIBLE) {
                             incomingArt.animate()
                                     .translationX(0f)
-                                    .alpha(1f)
-                                    .scaleX(1f)
-                                    .scaleY(1f)
-                                    .setDuration(160)
+                                    .setDuration(170)
                                     .setListener(new AnimatorListenerAdapter() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
@@ -160,17 +153,13 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                     } else if (flingPrev) {
                         targetArt.animate()
                                 .translationX(w)
-                                .alpha(0f)
-                                .setDuration(160)
+                                .setDuration(170)
                                 .start();
 
                         if (incomingArt != null && incomingArt.getVisibility() == View.VISIBLE) {
                             incomingArt.animate()
                                     .translationX(0f)
-                                    .alpha(1f)
-                                    .scaleX(1f)
-                                    .scaleY(1f)
-                                    .setDuration(160)
+                                    .setDuration(170)
                                     .setListener(new AnimatorListenerAdapter() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
@@ -183,18 +172,16 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                             resetArtViews();
                         }
                     } else {
-                        // Cancel swipe: volver al centro
+                        // Cancel swipe: regresar exactamente a sus posiciones iniciales
                         targetArt.animate()
                                 .translationX(0f)
-                                .alpha(1f)
-                                .scaleX(1f)
-                                .scaleY(1f)
                                 .setDuration(180)
                                 .start();
 
-                        if (incomingArt != null) {
+                        if (incomingArt != null && incomingArt.getVisibility() == View.VISIBLE) {
+                            float cancelDest = (currentDirection == -1) ? w : -w;
                             incomingArt.animate()
-                                    .alpha(0f)
+                                    .translationX(cancelDest)
                                     .setDuration(180)
                                     .setListener(new AnimatorListenerAdapter() {
                                         @Override
