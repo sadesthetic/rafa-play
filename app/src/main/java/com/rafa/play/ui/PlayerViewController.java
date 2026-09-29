@@ -308,6 +308,10 @@ public class PlayerViewController {
                 .alpha(0f)
                 .setDuration(160)
                 .withEndAction(() -> {
+                    if (ivPlayerArtIncoming != null && ivPlayerArtIncoming.getDrawable() != null) {
+                        ivPlayerArt.setImageDrawable(ivPlayerArtIncoming.getDrawable());
+                        ivPlayerArt.setImageTintList(ivPlayerArtIncoming.getImageTintList());
+                    }
                     if (toNext) host.onNext();
                     else host.onPrev();
                     ivPlayerArt.setTranslationX(0f);

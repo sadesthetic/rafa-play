@@ -62,6 +62,8 @@ public class TagEditorDialog {
         AlbumArtHelper.loadIntoImageView(ivDialogArt, song, 12);
 
         final Bitmap[] selectedBitmap = new Bitmap[1];
+        final int[] searchOffset = new int[]{0};
+        final String[] lastSearchKey = new String[]{""};
 
         Runnable updateSlowedBtn = () -> {
             boolean hasSlowed = etTitle.getText().toString().toLowerCase().contains("slowed");
@@ -93,11 +95,20 @@ public class TagEditorDialog {
         btnFindCover.setOnClickListener(v -> {
             String qTitle = etTitle.getText().toString().trim();
             String qArtist = etArtist.getText().toString().trim();
+            String queryKey = qTitle.toLowerCase() + "::" + qArtist.toLowerCase();
+
+            if (queryKey.equals(lastSearchKey[0])) {
+                searchOffset[0]++;
+            } else {
+                searchOffset[0] = 0;
+                lastSearchKey[0] = queryKey;
+            }
+
             pbLoading.setVisibility(View.VISIBLE);
             layoutCoverChoices.setVisibility(View.GONE);
-            tvStatus.setText("Buscando...");
+            tvStatus.setText("Buscando opciones...");
 
-            ArtworkSearchHelper.searchCovers(activity, qTitle, qArtist, new ArtworkSearchHelper.MultiCoverCallback() {
+            ArtworkSearchHelper.searchCovers(activity, qTitle, qArtist, searchOffset[0], new ArtworkSearchHelper.MultiCoverCallback() {
                 @Override
                 public void onCoversFound(List<Bitmap> bitmaps, ArtworkSearchHelper.TrackMetadataSuggestion meta) {
                     pbLoading.setVisibility(View.GONE);

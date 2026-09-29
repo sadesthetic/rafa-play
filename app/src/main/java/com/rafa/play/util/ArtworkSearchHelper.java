@@ -41,6 +41,10 @@ public class ArtworkSearchHelper {
     }
 
     public static void searchCovers(Context context, String title, String artist, MultiCoverCallback callback) {
+        searchCovers(context, title, artist, 0, callback);
+    }
+
+    public static void searchCovers(Context context, String title, String artist, int pageOffset, MultiCoverCallback callback) {
         new Thread(() -> {
             try {
                 List<String> queries = buildSearchQueries(title, artist);
@@ -50,15 +54,15 @@ public class ArtworkSearchHelper {
                 for (String q : queries) {
                     if (q == null || q.trim().isEmpty()) continue;
                     fetchItunesResults(q.trim(), imageUrls, metaResult);
-                    if (imageUrls.size() >= 3) break;
+                    if (imageUrls.size() >= 24) break;
                 }
 
-                // Fallback adicional con MusicBrainz si el artista sigue desconocido
                 if ((metaResult[0] == null || metaResult[0].artist.equalsIgnoreCase("Desconocido")) && !title.isEmpty()) {
                     fetchMusicBrainzMetadata(title, metaResult);
                 }
 
-                if (imageUrls.isEmpty()) {
+                List<String> allUrls = new ArrayList<>(imageUrls);
+                if (allUrls.isEmpty()) {
                     new Handler(Looper.getMainLooper()).post(() -> {
                         if (metaResult[0] != null) {
                             callback.onCoversFound(new ArrayList<>(), metaResult[0]);
@@ -69,13 +73,20 @@ public class ArtworkSearchHelper {
                     return;
                 }
 
+                int total = allUrls.size();
+                int itemsPerPage = 3;
+                int maxPages = Math.max(1, (int) Math.ceil((double) total / itemsPerPage));
+                int page = Math.abs(pageOffset) % maxPages;
+                int start = page * itemsPerPage;
+                int end = Math.min(start + itemsPerPage, total);
+
+                List<String> targetUrls = allUrls.subList(start, end);
                 List<Bitmap> bitmaps = new ArrayList<>();
-                for (String url : imageUrls) {
+                for (String url : targetUrls) {
                     Bitmap bmp = downloadBitmap(url);
                     if (bmp != null) {
                         bitmaps.add(bmp);
                     }
-                    if (bitmaps.size() >= 3) break;
                 }
 
                 new Handler(Looper.getMainLooper()).post(() -> {
@@ -144,7 +155,7 @@ public class ArtworkSearchHelper {
     private static void fetchItunesResults(String query, Set<String> outUrls, TrackMetadataSuggestion[] outMeta) {
         try {
             String encoded = URLEncoder.encode(query, "UTF-8");
-            String endpoint = "https://itunes.apple.com/search?term=" + encoded + "&media=music&entity=song&limit=6";
+            String endpoint = "https://itunes.apple.com/search?term=" + encoded + "&media=music&entity=song&limit=30";
 
             URL url = new URL(endpoint);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -179,7 +190,7 @@ public class ArtworkSearchHelper {
                         String art = item.optString("artworkUrl100", null);
                         if (art != null && !art.isEmpty()) {
                             outUrls.add(art.replace("100x100bb", "600x600bb"));
-                            if (outUrls.size() >= 3) break;
+                            if (outUrls.size() >= 24) break;
                         }
                     }
                 }

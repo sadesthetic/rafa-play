@@ -65,11 +65,16 @@ public class AppUpdater {
                     JSONObject release = new JSONObject(sb.toString());
                     String tagName = release.getString("tag_name");
                     String releaseNotes = release.optString("body", "");
-                    String cleanNewVer = tagName.replace("v", "").trim();
-                    String cleanCurVer = BuildConfig.VERSION_NAME.replace("v", "").trim();
+
+                    String rawCurVer = BuildConfig.VERSION_NAME;
+                    try {
+                        rawCurVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+                    } catch (Exception ignored) {}
+
+                    String cleanNewVer = tagName.replaceAll("^[vV]", "").trim();
+                    String cleanCurVer = rawCurVer.replaceAll("^[vV]", "").trim();
 
                     if (isNewerVersion(cleanNewVer, cleanCurVer)) {
-                        // Find APK asset
                         String downloadUrl = null;
                         JSONArray assets = release.optJSONArray("assets");
                         if (assets != null) {
@@ -92,10 +97,11 @@ public class AppUpdater {
                         }
                     }
 
+                    final String displayVer = rawCurVer;
                     new Handler(Looper.getMainLooper()).post(() -> {
                         if (callback != null) callback.onNoUpdate();
                         if (showToastIfUpToDate) {
-                            Toast.makeText(context, "Rafa Play está actualizado (" + BuildConfig.VERSION_NAME + ")", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, "Rafa Play ya está actualizado (" + displayVer + ")", Toast.LENGTH_SHORT).show();
                         }
                     });
                 } else {
@@ -205,15 +211,32 @@ public class AppUpdater {
         }
     }
 
-    private static boolean isNewerVersion(String newVer, String curVer) {
-        String[] newParts = newVer.split("\\.");
-        String[] curParts = curVer.split("\\.");
-        int len = Math.max(newParts.length, curParts.length);
-        for (int i = 0; i < len; i++) {
-            int n = (i < newParts.length) ? Integer.parseInt(newParts[i].replaceAll("\\D+", "")) : 0;
-            int c = (i < curParts.length) ? Integer.parseInt(curParts[i].replaceAll("\\D+", "")) : 0;
-            if (n > c) return true;
-            if (n < c) return false;
+    public static boolean isNewerVersion(String newVer, String curVer) {
+        if (newVer == null || curVer == null) return false;
+        String s1 = newVer.trim().replaceAll("^[vV]", "").trim();
+        String s2 = curVer.trim().replaceAll("^[vV]", "").trim();
+        if (s1.equalsIgnoreCase(s2)) return false;
+
+        String[] p1 = s1.split("[.\\-_]");
+        String[] p2 = s2.split("[.\\-_]");
+        int max = Math.max(p1.length, p2.length);
+        for (int i = 0; i < max; i++) {
+            int n1 = 0;
+            int n2 = 0;
+            if (i < p1.length) {
+                String d1 = p1[i].replaceAll("\\D+", "");
+                if (!d1.isEmpty()) {
+                    try { n1 = Integer.parseInt(d1); } catch (Exception ignored) {}
+                }
+            }
+            if (i < p2.length) {
+                String d2 = p2[i].replaceAll("\\D+", "");
+                if (!d2.isEmpty()) {
+                    try { n2 = Integer.parseInt(d2); } catch (Exception ignored) {}
+                }
+            }
+            if (n1 > n2) return true;
+            if (n1 < n2) return false;
         }
         return false;
     }

@@ -176,7 +176,9 @@ public class AlbumArtHelper {
         }
 
         imageView.setTag(songId);
-        showPlaceholder(imageView);
+        if (imageView.getDrawable() == null) {
+            showPlaceholder(imageView);
+        }
 
         executor.execute(() -> {
             Bitmap bmp = loadArtworkBitmap(context, song);

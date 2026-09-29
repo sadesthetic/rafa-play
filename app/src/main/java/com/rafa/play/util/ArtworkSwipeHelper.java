@@ -142,13 +142,11 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                                     .setListener(new AnimatorListenerAdapter() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
-                                            if (callback != null) callback.onNextTrack();
-                                            resetArtViews();
+                                            completeSwipe(true);
                                         }
                                     }).start();
                         } else {
-                            if (callback != null) callback.onNextTrack();
-                            resetArtViews();
+                            completeSwipe(true);
                         }
                     } else if (flingPrev) {
                         targetArt.animate()
@@ -163,13 +161,11 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
                                     .setListener(new AnimatorListenerAdapter() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
-                                            if (callback != null) callback.onPrevTrack();
-                                            resetArtViews();
+                                            completeSwipe(false);
                                         }
                                     }).start();
                         } else {
-                            if (callback != null) callback.onPrevTrack();
-                            resetArtViews();
+                            completeSwipe(false);
                         }
                     } else {
                         // Cancel swipe: regresar exactamente a sus posiciones iniciales
@@ -213,6 +209,26 @@ public class ArtworkSwipeHelper implements View.OnTouchListener {
         }
 
         return false;
+    }
+
+    private void completeSwipe(boolean next) {
+        if (incomingArt != null && incomingArt.getDrawable() != null) {
+            targetArt.setImageDrawable(incomingArt.getDrawable());
+            targetArt.setImageTintList(incomingArt.getImageTintList());
+            targetArt.setTag(incomingArt.getTag());
+        }
+        targetArt.setTranslationX(0f);
+        targetArt.setAlpha(1f);
+        targetArt.setScaleX(1f);
+        targetArt.setScaleY(1f);
+        if (incomingArt != null) {
+            incomingArt.setVisibility(View.GONE);
+            incomingArt.setTranslationX(0f);
+        }
+        if (callback != null) {
+            if (next) callback.onNextTrack();
+            else callback.onPrevTrack();
+        }
     }
 
     private void resetArtViews() {
