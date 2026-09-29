@@ -26,6 +26,10 @@ public class OnSwipeTouchListener implements View.OnTouchListener {
 
     public void onSwipeLeft() {}
 
+    public void onSwipeDown() {}
+
+    public void onSwipeUp() {}
+
     public void onClick() {}
 
     private final class GestureListener extends GestureDetector.SimpleOnGestureListener {
@@ -55,6 +59,15 @@ public class OnSwipeTouchListener implements View.OnTouchListener {
                         onSwipeRight();
                     } else {
                         onSwipeLeft();
+                    }
+                    return true;
+                }
+            } else {
+                if (Math.abs(diffY) > SWIPE_THRESHOLD && Math.abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (diffY > 0) {
+                        onSwipeDown();
+                    } else {
+                        onSwipeUp();
                     }
                     return true;
                 }

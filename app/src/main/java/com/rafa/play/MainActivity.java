@@ -334,6 +334,11 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             public void onSwipeRight() {
                 animateTrackSwipe(false);
             }
+
+            @Override
+            public void onSwipeDown() {
+                closeFullPlayer();
+            }
         };
 
         marsCurvedHeader.setOnTouchListener(playerSwipeListener);
