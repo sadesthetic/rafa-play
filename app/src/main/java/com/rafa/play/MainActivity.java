@@ -624,6 +624,96 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
                 audioService.isRepeat() ? getColor(R.color.accent_mars) : getColor(R.color.text_muted)));
     }
 
+    public void showSongTagEditorDialog(Song song) {
+        if (song == null) return;
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_tag_editor);
+
+        android.view.Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+
+        EditText etTitle = dialog.findViewById(R.id.etTitle);
+        EditText etArtist = dialog.findViewById(R.id.etArtist);
+        ImageView ivDialogArt = dialog.findViewById(R.id.ivDialogArt);
+        View pbLoading = dialog.findViewById(R.id.pbCoverLoading);
+        TextView tvStatus = dialog.findViewById(R.id.tvCoverStatus);
+        View btnFindCover = dialog.findViewById(R.id.btnFindCover);
+        View btnSmartClean = dialog.findViewById(R.id.btnSmartClean);
+        View btnCancel = dialog.findViewById(R.id.btnCancelTag);
+        View btnSave = dialog.findViewById(R.id.btnSaveTag);
+
+        etTitle.setText(song.getTitle());
+        etArtist.setText(song.getArtist());
+        AlbumArtHelper.loadIntoImageView(ivDialogArt, song, 12);
+
+        final android.graphics.Bitmap[] suggestedBitmap = new android.graphics.Bitmap[1];
+
+        btnSmartClean.setOnClickListener(v -> {
+            btnSmartClean.animate().rotationBy(360).setDuration(400).start();
+            com.rafa.play.util.TagSanitizer.CleanResult result =
+                    com.rafa.play.util.TagSanitizer.clean(etTitle.getText().toString(), etArtist.getText().toString(), song.getData());
+            etTitle.setText(result.title);
+            etArtist.setText(result.artist);
+            Toast.makeText(this, "Etiquetas organizadas", Toast.LENGTH_SHORT).show();
+        });
+
+        btnFindCover.setOnClickListener(v -> {
+            String qTitle = etTitle.getText().toString().trim();
+            String qArtist = etArtist.getText().toString().trim();
+            pbLoading.setVisibility(View.VISIBLE);
+            tvStatus.setText("Buscando en la web...");
+
+            com.rafa.play.util.ArtworkSearchHelper.searchCover(this, qTitle, qArtist, new com.rafa.play.util.ArtworkSearchHelper.CoverCallback() {
+                @Override
+                public void onCoverFound(android.graphics.Bitmap bitmap, String coverUrl) {
+                    pbLoading.setVisibility(View.GONE);
+                    suggestedBitmap[0] = bitmap;
+                    ivDialogArt.setImageTintList(null);
+                    ivDialogArt.setImageBitmap(bitmap);
+                    tvStatus.setText("Portada sugerida encontrada");
+                }
+
+                @Override
+                public void onNoCover() {
+                    pbLoading.setVisibility(View.GONE);
+                    tvStatus.setText("No se encontró portada sugerida");
+                }
+
+                @Override
+                public void onError(String message) {
+                    pbLoading.setVisibility(View.GONE);
+                    tvStatus.setText("Error de red");
+                }
+            });
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnSave.setOnClickListener(v -> {
+            String newTitle = etTitle.getText().toString().trim();
+            String newArtist = etArtist.getText().toString().trim();
+            if (newTitle.isEmpty()) newTitle = "Sin título";
+            if (newArtist.isEmpty()) newArtist = "Desconocido";
+
+            repository.updateSongTags(song.getId(), newTitle, newArtist);
+
+            if (suggestedBitmap[0] != null) {
+                com.rafa.play.util.ArtworkSearchHelper.saveCustomCover(this, song.getId(), suggestedBitmap[0]);
+                AlbumArtHelper.invalidateSongArt(song.getId());
+            }
+
+            dialog.dismiss();
+            loadSongs();
+            Toast.makeText(this, "Cambios guardados", Toast.LENGTH_SHORT).show();
+        });
+
+        dialog.show();
+    }
+
     @Override
     public void onBackPressed() {
         if (fullPlayerLayout.getVisibility() == View.VISIBLE) {

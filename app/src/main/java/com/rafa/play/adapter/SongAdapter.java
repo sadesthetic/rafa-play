@@ -29,9 +29,20 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
         void onSongClick(Song song, int position);
     }
 
+    public interface OnSongOptionClickListener {
+        void onSongOptionClick(Song song, View anchor);
+    }
+
+    private final OnSongOptionClickListener optionListener;
+
     public SongAdapter(Context context, OnSongClickListener listener) {
+        this(context, listener, null);
+    }
+
+    public SongAdapter(Context context, OnSongClickListener listener, OnSongOptionClickListener optionListener) {
         this.context = context;
         this.listener = listener;
+        this.optionListener = optionListener;
     }
 
     public void setSongs(List<Song> songs) {
@@ -72,6 +83,12 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
                 listener.onSongClick(song, holder.getBindingAdapterPosition());
             }
         });
+
+        holder.btnOptions.setOnClickListener(v -> {
+            if (optionListener != null) {
+                optionListener.onSongOptionClick(song, v);
+            }
+        });
     }
 
     @Override
@@ -85,6 +102,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
         TextView tvArtist;
         TextView tvDuration;
         ImageView ivActiveIndicator;
+        View btnOptions;
 
         SongViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -93,6 +111,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
             tvArtist = itemView.findViewById(R.id.tvSongArtist);
             tvDuration = itemView.findViewById(R.id.tvSongDuration);
             ivActiveIndicator = itemView.findViewById(R.id.ivActiveIndicator);
+            btnOptions = itemView.findViewById(R.id.btnSongOptions);
         }
     }
 }

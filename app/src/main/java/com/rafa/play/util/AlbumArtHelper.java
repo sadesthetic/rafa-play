@@ -48,6 +48,13 @@ public class AlbumArtHelper {
 
         Bitmap bitmap = null;
 
+        File customCover = ArtworkSearchHelper.getCustomCoverFile(context, songId);
+        if (customCover != null) {
+            try {
+                bitmap = BitmapFactory.decodeFile(customCover.getAbsolutePath());
+            } catch (Throwable ignored) {}
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && song.getAlbumId() > 0) {
             try {
                 Uri albumUri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, song.getAlbumId());
@@ -206,5 +213,9 @@ public class AlbumArtHelper {
     private static void showPlaceholder(ImageView imageView) {
         imageView.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(imageView.getContext(), R.color.text_secondary)));
         imageView.setImageResource(R.drawable.ic_music_minimal);
+    }
+
+    public static void invalidateSongArt(long songId) {
+        memoryCache.remove(songId);
     }
 }

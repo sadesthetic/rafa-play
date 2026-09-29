@@ -69,6 +69,12 @@ public class MusicRepository {
                     long albumId = cursor.getLong(albumIdCol);
                     long dateAdded = cursor.getLong(dateCol);
 
+                    SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+                    String overrideTitle = sp.getString("tag_title_" + id, null);
+                    String overrideArtist = sp.getString("tag_artist_" + id, null);
+                    if (overrideTitle != null) title = overrideTitle;
+                    if (overrideArtist != null) artist = overrideArtist;
+
                     songs.add(new Song(id, title, artist, album, duration, data, albumId, dateAdded));
                 } while (cursor.moveToNext());
             }
@@ -202,5 +208,13 @@ public class MusicRepository {
             if (s != null) result.add(s);
         }
         return result;
+    }
+
+    public void updateSongTags(long songId, String newTitle, String newArtist) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString("tag_title_" + songId, newTitle)
+                .putString("tag_artist_" + songId, newArtist)
+                .apply();
     }
 }

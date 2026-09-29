@@ -39,6 +39,10 @@ public class SongsFragment extends Fragment {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).playSongFromList(allSongs, position);
             }
+        }, (song, anchor) -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).showSongTagEditorDialog(song);
+            }
         });
         rvSongs.setAdapter(songAdapter);
 
