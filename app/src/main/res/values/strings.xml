@@ -20,4 +20,5 @@
     <string name="section_recent">Agregadas recientemente</string>
     <string name="play_all">Reproducir todo</string>
     <string name="empty_section">Sin canciones</string>
+    <string name="check_updates">Buscar actualizaciones</string>
 </resources>

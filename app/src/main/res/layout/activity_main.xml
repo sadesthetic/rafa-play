@@ -39,18 +39,9 @@
                 android:orientation="horizontal">
 
                 <ImageButton
-                    android:id="@+id/btnCheckUpdate"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_update_minimal"
-                    app:tint="@color/text_primary" />
-
-                <ImageButton
                     android:id="@+id/btnSearchToggle"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_search_minimal"
                     app:tint="@color/text_primary" />
@@ -218,15 +209,6 @@
             app:tint="@color/text_primary" />
 
     </LinearLayout>
-
-    <!-- Top Curved Playback Paddle (Drops from top when playing) -->
-    <include
-        android:id="@+id/topPaddleLayout"
-        layout="@layout/layout_top_paddle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_marginTop="32dp" />
 
     <!-- Full Screen Mars Player Sheet (Overlays when opened) -->
     <include

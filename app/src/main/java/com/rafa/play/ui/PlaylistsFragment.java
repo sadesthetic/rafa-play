@@ -87,6 +87,19 @@ public class PlaylistsFragment extends Fragment {
 
         btnCreate.setOnClickListener(v -> showCreatePlaylistDialog());
 
+        View itemCheckUpdate = view.findViewById(R.id.itemCheckUpdate);
+        View ivUpdateIcon = view.findViewById(R.id.ivUpdateIcon);
+        if (itemCheckUpdate != null) {
+            itemCheckUpdate.setOnClickListener(v -> {
+                if (ivUpdateIcon != null) {
+                    ivUpdateIcon.animate().rotationBy(360).setDuration(600).start();
+                }
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).checkAppUpdates(true, null);
+                }
+            });
+        }
+
         loadPlaylists();
         return view;
     }

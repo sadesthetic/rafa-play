@@ -75,13 +75,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private ImageButton btnMiniPlayPause;
     private ImageButton btnMiniNext;
 
-    // Top Curved Paddle
-    private LinearLayout topPaddleLayout;
-    private ShapeableImageView ivPaddleArt;
-    private TextView tvPaddleTitle;
-    private TextView tvPaddleArtist;
-    private ImageButton btnPaddlePlayPause;
-
     // Mars Full Player
     private View fullPlayerLayout;
     private MarsCurvedHeaderLayout marsCurvedHeader;
@@ -138,7 +131,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         setupTabs();
         setupSearch();
         setupUpdater();
-        setupPaddle();
         setupMiniPlayer();
         setupFullPlayer();
 
@@ -159,12 +151,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         tvMiniArtist = findViewById(R.id.tvMiniArtist);
         btnMiniPlayPause = findViewById(R.id.btnMiniPlayPause);
         btnMiniNext = findViewById(R.id.btnMiniNext);
-
-        topPaddleLayout = findViewById(R.id.topPaddleLayout);
-        ivPaddleArt = findViewById(R.id.ivPaddleArt);
-        tvPaddleTitle = findViewById(R.id.tvPaddleTitle);
-        tvPaddleArtist = findViewById(R.id.tvPaddleArtist);
-        btnPaddlePlayPause = findViewById(R.id.btnPaddlePlayPause);
 
         fullPlayerLayout = findViewById(R.id.fullPlayerLayout);
         marsCurvedHeader = findViewById(R.id.marsCurvedHeader);
@@ -254,46 +240,31 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         });
     }
 
-    private void setupUpdater() {
-        ImageButton btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
-        btnCheckUpdate.setOnClickListener(v -> {
-            btnCheckUpdate.animate().rotationBy(360).setDuration(600).start();
-            com.rafa.play.util.AppUpdater.checkUpdate(this, true, new com.rafa.play.util.AppUpdater.UpdateCheckCallback() {
-                @Override
-                public void onUpdateAvailable(String newVersion, String apkDownloadUrl, String releaseNotes) {
-                    com.rafa.play.util.AppUpdater.showUpdateDialog(MainActivity.this, newVersion, apkDownloadUrl);
-                }
-
-                @Override
-                public void onNoUpdate() {}
-
-                @Override
-                public void onError(String error) {
-                    Toast.makeText(MainActivity.this, "Error al comprobar actualizaciones", Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
-
-        // Automatic background check on start
-        com.rafa.play.util.AppUpdater.checkUpdate(this, false, new com.rafa.play.util.AppUpdater.UpdateCheckCallback() {
+    public void checkAppUpdates(boolean userInitiated, Runnable onFinishAnimation) {
+        com.rafa.play.util.AppUpdater.checkUpdate(this, userInitiated, new com.rafa.play.util.AppUpdater.UpdateCheckCallback() {
             @Override
             public void onUpdateAvailable(String newVersion, String apkDownloadUrl, String releaseNotes) {
+                if (onFinishAnimation != null) onFinishAnimation.run();
                 com.rafa.play.util.AppUpdater.showUpdateDialog(MainActivity.this, newVersion, apkDownloadUrl);
             }
 
             @Override
-            public void onNoUpdate() {}
+            public void onNoUpdate() {
+                if (onFinishAnimation != null) onFinishAnimation.run();
+            }
 
             @Override
-            public void onError(String error) {}
+            public void onError(String error) {
+                if (onFinishAnimation != null) onFinishAnimation.run();
+                if (userInitiated) {
+                    Toast.makeText(MainActivity.this, "Error al comprobar actualizaciones", Toast.LENGTH_SHORT).show();
+                }
+            }
         });
     }
 
-    private void setupPaddle() {
-        topPaddleLayout.setOnClickListener(v -> openFullPlayer());
-        btnPaddlePlayPause.setOnClickListener(v -> {
-            if (audioService != null) audioService.togglePlayPause();
-        });
+    private void setupUpdater() {
+        checkAppUpdates(false, null);
     }
 
     private void setupMiniPlayer() {
@@ -324,25 +295,26 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private void setupFullPlayer() {
         findViewById(R.id.btnClosePlayer).setOnClickListener(v -> closeFullPlayer());
 
-        com.rafa.play.util.OnSwipeTouchListener playerSwipeListener = new com.rafa.play.util.OnSwipeTouchListener(this) {
+        com.rafa.play.util.ArtworkSwipeHelper artworkSwipeHelper = new com.rafa.play.util.ArtworkSwipeHelper(
+                this, ivPlayerArt, fullPlayerLayout, new com.rafa.play.util.ArtworkSwipeHelper.Callback() {
             @Override
-            public void onSwipeLeft() {
-                animateTrackSwipe(true);
+            public void onNextTrack() {
+                if (audioService != null) audioService.playNext();
             }
 
             @Override
-            public void onSwipeRight() {
-                animateTrackSwipe(false);
+            public void onPrevTrack() {
+                if (audioService != null) audioService.playPrev();
             }
 
             @Override
-            public void onSwipeDown() {
+            public void onDismissPlayer() {
                 closeFullPlayer();
             }
-        };
+        });
 
-        marsCurvedHeader.setOnTouchListener(playerSwipeListener);
-        ivPlayerArt.setOnTouchListener(playerSwipeListener);
+        marsCurvedHeader.setOnTouchListener(artworkSwipeHelper);
+        ivPlayerArt.setOnTouchListener(artworkSwipeHelper);
 
         com.rafa.play.views.PlayerBottomLayout playerBottomContainer = findViewById(R.id.playerBottomContainer);
         if (playerBottomContainer != null) {
@@ -564,12 +536,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
                 pagerAdapter.getPlaylistsFragment().loadPlaylists();
             }
 
-            // Top Paddle
-            tvPaddleTitle.setText(song.getTitle());
-            tvPaddleArtist.setText(song.getArtist());
-            AlbumArtHelper.loadIntoImageView(ivPaddleArt, song, 12);
-            showTopPaddleWithAnimation();
-
             // Mini player
             miniPlayer.setVisibility(View.VISIBLE);
             tvMiniTitle.setText(song.getTitle());
@@ -611,23 +577,11 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         }).start();
     }
 
-    private void showTopPaddleWithAnimation() {
-        if (topPaddleLayout.getVisibility() != View.VISIBLE) {
-            topPaddleLayout.setVisibility(View.VISIBLE);
-            topPaddleLayout.setTranslationY(-topPaddleLayout.getHeight() - 100);
-            topPaddleLayout.animate()
-                    .translationY(0)
-                    .setDuration(400)
-                    .start();
-        }
-    }
-
     @Override
     public void onPlaybackStateChanged(boolean isPlaying) {
         runOnUiThread(() -> {
             int playIcon = isPlaying ? R.drawable.ic_pause_minimal : R.drawable.ic_play_minimal;
             btnMiniPlayPause.setImageResource(playIcon);
-            btnPaddlePlayPause.setImageResource(playIcon);
             btnPlayerPlayPause.setImageResource(playIcon);
         });
     }

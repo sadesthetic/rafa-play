@@ -21,8 +21,7 @@
             android:id="@+id/ivPlayerArt"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:background="@color/surface_card"
+            android:scaleType="fitXY"
             android:src="@drawable/ic_music_minimal" />
 
         <!-- Gradient overlay -->

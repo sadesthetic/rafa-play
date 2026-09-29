@@ -198,7 +198,7 @@ public class AlbumArtHelper {
         } else {
             Glide.with(ctx)
                     .load(bitmap)
-                    .centerCrop()
+                    .dontTransform()
                     .into(imageView);
         }
     }
