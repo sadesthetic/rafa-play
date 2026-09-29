@@ -1,26 +1,19 @@
 package com.rafa.play;
 
 import android.Manifest;
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.DisplayMetrics;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,27 +22,25 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.imageview.ShapeableImageView;
-import com.rafa.play.adapter.LyricsAdapter;
 import com.rafa.play.adapter.MainPagerAdapter;
 import com.rafa.play.data.MusicRepository;
-import com.rafa.play.model.LyricLine;
+import com.rafa.play.data.PlaybackStatsManager;
 import com.rafa.play.model.Playlist;
 import com.rafa.play.model.Song;
 import com.rafa.play.service.RafaAudioService;
+import com.rafa.play.ui.PlayerViewController;
+import com.rafa.play.ui.TagEditorDialog;
 import com.rafa.play.util.AlbumArtHelper;
-import com.rafa.play.util.LyricsHelper;
-import com.rafa.play.views.MarsCurvedEdgeSeekBar;
-import com.rafa.play.views.MarsCurvedHeaderLayout;
+import com.rafa.play.util.AppUpdater;
+import com.rafa.play.util.OnSwipeTouchListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements RafaAudioService.PlaybackCallback {
+public class MainActivity extends AppCompatActivity implements RafaAudioService.PlaybackCallback, PlayerViewController.PlayerHost {
 
     private static final int PERMISSION_REQ_CODE = 200;
 
@@ -59,7 +50,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private MusicRepository repository;
     private List<Song> songList = new ArrayList<>();
 
-    // Main navigation views
     private ViewPager2 viewPager;
     private MainPagerAdapter pagerAdapter;
     private TextView tabSongs;
@@ -67,7 +57,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private LinearLayout searchBarContainer;
     private EditText etSearch;
 
-    // Mini Player
     private LinearLayout miniPlayer;
     private ShapeableImageView ivMiniArt;
     private TextView tvMiniTitle;
@@ -75,29 +64,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private ImageButton btnMiniPlayPause;
     private ImageButton btnMiniNext;
 
-    // Mars Full Player
-    private View fullPlayerLayout;
-    private MarsCurvedHeaderLayout marsCurvedHeader;
-    private ImageView ivPlayerArt;
-    private ImageView ivPlayerArtIncoming;
-    private MarsCurvedEdgeSeekBar marsCurvedEdgeSeekBar;
-    private RecyclerView rvLyrics;
-    private LyricsAdapter lyricsAdapter;
-    private List<LyricLine> currentLyrics = new ArrayList<>();
-
-    private TextView tvPlayerArtist;
-    private TextView tvPlayerTopTitle;
-    private TextView tvCurrentLyricLine;
-
-    private ImageButton btnPlayerPlayPause;
-    private FrameLayout btnPlayPauseWrapper;
-    private ImageButton btnShuffle;
-    private ImageButton btnRepeat;
-    private ImageButton btnPrev;
-    private ImageButton btnNext;
-    private ImageButton btnToggleLyrics;
-
-    private boolean isLyricsVisible = false;
+    private PlayerViewController playerViewController;
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -131,10 +98,12 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         initViews();
         setupTabs();
         setupSearch();
-        setupUpdater();
         setupMiniPlayer();
-        setupFullPlayer();
 
+        playerViewController = new PlayerViewController(this, this);
+        playerViewController.init(findViewById(android.R.id.content));
+
+        checkAppUpdates(false, null);
         checkPermissionsAndLoad();
         bindAudioService();
     }
@@ -153,41 +122,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         btnMiniPlayPause = findViewById(R.id.btnMiniPlayPause);
         btnMiniNext = findViewById(R.id.btnMiniNext);
 
-        fullPlayerLayout = findViewById(R.id.fullPlayerLayout);
-        marsCurvedHeader = findViewById(R.id.marsCurvedHeader);
-        ivPlayerArt = findViewById(R.id.ivPlayerArt);
-        ivPlayerArtIncoming = findViewById(R.id.ivPlayerArtIncoming);
-        marsCurvedEdgeSeekBar = findViewById(R.id.marsCurvedEdgeSeekBar);
-        rvLyrics = findViewById(R.id.rvLyrics);
-
-        tvPlayerArtist = findViewById(R.id.tvPlayerArtist);
-        tvPlayerTopTitle = findViewById(R.id.tvPlayerTopTitle);
-        tvCurrentLyricLine = findViewById(R.id.tvCurrentLyricLine);
-
-        btnPlayerPlayPause = findViewById(R.id.btnPlayerPlayPause);
-        btnPlayPauseWrapper = findViewById(R.id.btnPlayPauseWrapper);
-        btnShuffle = findViewById(R.id.btnShuffle);
-        btnRepeat = findViewById(R.id.btnRepeat);
-        btnPrev = findViewById(R.id.btnPrev);
-        btnNext = findViewById(R.id.btnNext);
-        btnToggleLyrics = findViewById(R.id.btnToggleLyrics);
-
-        // Set curved dome height to 52% of total screen height
-        DisplayMetrics dm = getResources().getDisplayMetrics();
-        int headerHeight = (int) (dm.heightPixels * 0.52f);
-        ViewGroup.LayoutParams lp = marsCurvedHeader.getLayoutParams();
-        lp.height = headerHeight;
-        marsCurvedHeader.setLayoutParams(lp);
-
-        // Setup Lyrics RecyclerView
-        lyricsAdapter = new LyricsAdapter(this, (line, position) -> {
-            if (audioService != null) {
-                audioService.seekTo((int) line.getTimeMs());
-            }
-        });
-        rvLyrics.setLayoutManager(new LinearLayoutManager(this));
-        rvLyrics.setAdapter(lyricsAdapter);
-
         pagerAdapter = new MainPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -204,25 +138,17 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     }
 
     private void updateTabStyle(int selectedIndex) {
-        if (selectedIndex == 0) {
-            tabSongs.setTextColor(getColor(R.color.text_primary));
-            tabPlaylists.setTextColor(getColor(R.color.text_secondary));
-        } else {
-            tabSongs.setTextColor(getColor(R.color.text_secondary));
-            tabPlaylists.setTextColor(getColor(R.color.text_primary));
-        }
+        tabSongs.setTextColor(getColor(selectedIndex == 0 ? R.color.text_primary : R.color.text_secondary));
+        tabPlaylists.setTextColor(getColor(selectedIndex == 1 ? R.color.text_primary : R.color.text_secondary));
     }
 
     private void setupSearch() {
-        View btnSearchToggle = findViewById(R.id.btnSearchToggle);
-        View btnCloseSearch = findViewById(R.id.btnCloseSearch);
-
-        btnSearchToggle.setOnClickListener(v -> {
+        findViewById(R.id.btnSearchToggle).setOnClickListener(v -> {
             searchBarContainer.setVisibility(View.VISIBLE);
             etSearch.requestFocus();
         });
 
-        btnCloseSearch.setOnClickListener(v -> {
+        findViewById(R.id.btnCloseSearch).setOnClickListener(v -> {
             etSearch.setText("");
             searchBarContainer.setVisibility(View.GONE);
             pagerAdapter.getSongsFragment().filterSongs("");
@@ -242,12 +168,33 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         });
     }
 
+    private void setupMiniPlayer() {
+        miniPlayer.setOnTouchListener(new OnSwipeTouchListener(this) {
+            @Override
+            public void onSwipeLeft() {
+                if (audioService != null) audioService.playNext();
+            }
+
+            @Override
+            public void onSwipeRight() {
+                if (audioService != null) audioService.playPrev();
+            }
+
+            @Override
+            public void onClick() {
+                openFullPlayer();
+            }
+        });
+        btnMiniPlayPause.setOnClickListener(v -> onPlayPause());
+        btnMiniNext.setOnClickListener(v -> onNext());
+    }
+
     public void checkAppUpdates(boolean userInitiated, Runnable onFinishAnimation) {
-        com.rafa.play.util.AppUpdater.checkUpdate(this, userInitiated, new com.rafa.play.util.AppUpdater.UpdateCheckCallback() {
+        AppUpdater.checkUpdate(this, userInitiated, new AppUpdater.UpdateCheckCallback() {
             @Override
             public void onUpdateAvailable(String newVersion, String apkDownloadUrl, String releaseNotes) {
                 if (onFinishAnimation != null) onFinishAnimation.run();
-                com.rafa.play.util.AppUpdater.showUpdateDialog(MainActivity.this, newVersion, apkDownloadUrl);
+                AppUpdater.showUpdateDialog(MainActivity.this, newVersion, apkDownloadUrl);
             }
 
             @Override
@@ -265,216 +212,8 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         });
     }
 
-    private void setupUpdater() {
-        checkAppUpdates(false, null);
-    }
-
-    private void setupMiniPlayer() {
-        miniPlayer.setOnTouchListener(new com.rafa.play.util.OnSwipeTouchListener(this) {
-            @Override
-            public void onSwipeLeft() {
-                if (audioService != null) audioService.playNext();
-            }
-
-            @Override
-            public void onSwipeRight() {
-                if (audioService != null) audioService.playPrev();
-            }
-
-            @Override
-            public void onClick() {
-                openFullPlayer();
-            }
-        });
-        btnMiniPlayPause.setOnClickListener(v -> {
-            if (audioService != null) audioService.togglePlayPause();
-        });
-        btnMiniNext.setOnClickListener(v -> {
-            if (audioService != null) audioService.playNext();
-        });
-    }
-
-    private void setupFullPlayer() {
-        findViewById(R.id.btnClosePlayer).setOnClickListener(v -> closeFullPlayer());
-
-        com.rafa.play.util.ArtworkSwipeHelper artworkSwipeHelper = new com.rafa.play.util.ArtworkSwipeHelper(
-                this, ivPlayerArt, ivPlayerArtIncoming, fullPlayerLayout, new com.rafa.play.util.ArtworkSwipeHelper.Callback() {
-            @Override
-            public void onNextTrack() {
-                if (audioService != null) audioService.playNext();
-            }
-
-            @Override
-            public void onPrevTrack() {
-                if (audioService != null) audioService.playPrev();
-            }
-
-            @Override
-            public void onDismissPlayer() {
-                closeFullPlayer();
-            }
-
-            @Override
-            public Song getNextSong() {
-                return audioService != null ? audioService.getNextSong() : null;
-            }
-
-            @Override
-            public Song getPrevSong() {
-                return audioService != null ? audioService.getPrevSong() : null;
-            }
-        });
-
-        marsCurvedHeader.setOnTouchListener(artworkSwipeHelper);
-        ivPlayerArt.setOnTouchListener(artworkSwipeHelper);
-
-        com.rafa.play.views.PlayerBottomLayout playerBottomContainer = findViewById(R.id.playerBottomContainer);
-        if (playerBottomContainer != null) {
-            playerBottomContainer.setOnScrubListener(new com.rafa.play.views.PlayerBottomLayout.OnScrubListener() {
-                private int initialProgress = 0;
-                private int targetProgress = 0;
-
-                @Override
-                public void onScrubStart() {
-                    initialProgress = marsCurvedEdgeSeekBar.getProgress();
-                    targetProgress = initialProgress;
-                    marsCurvedEdgeSeekBar.setScrubbing(true);
-                }
-
-                @Override
-                public void onScrub(float deltaX, float totalWidth) {
-                    if (totalWidth <= 0) return;
-                    float ratio = deltaX / totalWidth;
-                    int deltaProgress = (int) (ratio * marsCurvedEdgeSeekBar.getMax());
-                    targetProgress = Math.max(0, Math.min(marsCurvedEdgeSeekBar.getMax(), initialProgress + deltaProgress));
-                    marsCurvedEdgeSeekBar.setScrubProgress(targetProgress);
-                }
-
-                @Override
-                public void onScrubEnd() {
-                    marsCurvedEdgeSeekBar.setScrubbing(false);
-                    if (audioService != null) {
-                        audioService.seekTo(targetProgress);
-                    }
-                }
-
-                @Override
-                public void onSwipeDown() {
-                    closeFullPlayer();
-                }
-            });
-        }
-
-        btnPlayerPlayPause.setOnClickListener(v -> {
-            if (audioService != null) audioService.togglePlayPause();
-        });
-
-        btnPrev.setOnClickListener(v -> {
-            animateTrackSwipe(false);
-        });
-
-        btnNext.setOnClickListener(v -> {
-            animateTrackSwipe(true);
-        });
-
-        btnShuffle.setOnClickListener(v -> {
-            if (audioService != null) {
-                audioService.toggleShuffle();
-                updateShuffleRepeatState();
-            }
-        });
-
-        btnRepeat.setOnClickListener(v -> {
-            if (audioService != null) {
-                audioService.toggleRepeat();
-                updateShuffleRepeatState();
-            }
-        });
-
-        btnToggleLyrics.setOnClickListener(v -> {
-            isLyricsVisible = !isLyricsVisible;
-            if (isLyricsVisible) {
-                rvLyrics.setVisibility(View.VISIBLE);
-                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(getColor(R.color.accent_mars)));
-            } else {
-                rvLyrics.setVisibility(View.GONE);
-                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
-            }
-        });
-
-        marsCurvedEdgeSeekBar.setOnSeekBarChangeListener(new MarsCurvedEdgeSeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(MarsCurvedEdgeSeekBar seekBar, int progress, boolean fromUser) {}
-
-            @Override
-            public void onStartTrackingTouch(MarsCurvedEdgeSeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(MarsCurvedEdgeSeekBar seekBar) {
-                if (audioService != null) {
-                    audioService.seekTo(seekBar.getProgress());
-                }
-            }
-        });
-    }
-
-    private void animateTrackSwipe(boolean toNext) {
-        if (audioService == null) return;
-        Song targetSong = toNext ? audioService.getNextSong() : audioService.getPrevSong();
-        float width = (ivPlayerArt != null && ivPlayerArt.getWidth() > 0) ? ivPlayerArt.getWidth() : 400f;
-        float outX = toNext ? -width : width;
-
-        if (targetSong != null && ivPlayerArtIncoming != null) {
-            AlbumArtHelper.loadIntoImageView(ivPlayerArtIncoming, targetSong, 0);
-            ivPlayerArtIncoming.setVisibility(View.VISIBLE);
-            ivPlayerArtIncoming.setAlpha(0.5f);
-            ivPlayerArtIncoming.setScaleX(0.92f);
-            ivPlayerArtIncoming.setScaleY(0.92f);
-            ivPlayerArtIncoming.animate()
-                    .alpha(1f)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(160)
-                    .start();
-        }
-
-        ivPlayerArt.animate()
-                .translationX(outX)
-                .alpha(0f)
-                .setDuration(160)
-                .withEndAction(() -> {
-                    if (toNext) {
-                        audioService.playNext();
-                    } else {
-                        audioService.playPrev();
-                    }
-                    ivPlayerArt.setTranslationX(0f);
-                    ivPlayerArt.setAlpha(1f);
-                    if (ivPlayerArtIncoming != null) {
-                        ivPlayerArtIncoming.setVisibility(View.GONE);
-                    }
-                }).start();
-    }
-
-    private void openFullPlayer() {
-        fullPlayerLayout.setVisibility(View.VISIBLE);
-        fullPlayerLayout.setTranslationY(fullPlayerLayout.getHeight() > 0 ? fullPlayerLayout.getHeight() : 2000);
-        fullPlayerLayout.animate()
-                .translationY(0)
-                .setDuration(300)
-                .setListener(null);
-    }
-
-    private void closeFullPlayer() {
-        fullPlayerLayout.animate()
-                .translationY(fullPlayerLayout.getHeight())
-                .setDuration(250)
-                .setListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        fullPlayerLayout.setVisibility(View.GONE);
-                    }
-                });
+    public void openFullPlayer() {
+        playerViewController.openPlayer();
     }
 
     private void bindAudioService() {
@@ -544,62 +283,28 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         }
         if (!playlistSongs.isEmpty()) {
             playSongFromList(playlistSongs, 0);
-        } else {
-            if (!songList.isEmpty()) {
-                playSongFromList(songList, 0);
-            }
+        } else if (!songList.isEmpty()) {
+            playSongFromList(songList, 0);
         }
     }
 
     @Override
     public void onTrackChanged(Song song, int index) {
         if (song == null) return;
-        new com.rafa.play.data.PlaybackStatsManager(this).recordSongPlay(song.getId());
+        new PlaybackStatsManager(this).recordSongPlay(song.getId());
         runOnUiThread(() -> {
             pagerAdapter.getSongsFragment().setActiveSongId(song.getId());
             if (pagerAdapter.getPlaylistsFragment() != null) {
                 pagerAdapter.getPlaylistsFragment().loadPlaylists();
             }
 
-            // Mini player
             miniPlayer.setVisibility(View.VISIBLE);
             tvMiniTitle.setText(song.getTitle());
             tvMiniArtist.setText(song.getArtist());
             AlbumArtHelper.loadIntoImageView(ivMiniArt, song, 12);
 
-            // Mars curved full player: Artist on top pill, Song title below
-            tvPlayerTopTitle.setText(song.getArtist());
-            tvPlayerArtist.setText(song.getTitle());
-            AlbumArtHelper.loadIntoImageView(ivPlayerArt, song, 0);
-
-            marsCurvedEdgeSeekBar.setMax((int) song.getDuration());
-            marsCurvedEdgeSeekBar.setProgress(0);
-
-            // Load Synchronized Lyrics
-            loadLyricsForCurrentSong(song);
+            playerViewController.updateTrack(song);
         });
-    }
-
-    private void loadLyricsForCurrentSong(Song song) {
-        new Thread(() -> {
-            List<LyricLine> lyrics = LyricsHelper.loadLyricsForSong(song);
-            runOnUiThread(() -> {
-                currentLyrics = lyrics;
-                lyricsAdapter.setLyrics(lyrics);
-                if (lyrics != null && !lyrics.isEmpty()) {
-                    btnToggleLyrics.setVisibility(View.VISIBLE);
-                    tvCurrentLyricLine.setVisibility(View.VISIBLE);
-                    tvCurrentLyricLine.setText(lyrics.get(0).getText());
-                } else {
-                    btnToggleLyrics.setVisibility(View.GONE);
-                    tvCurrentLyricLine.setVisibility(View.GONE);
-                    if (isLyricsVisible) {
-                        isLyricsVisible = false;
-                        rvLyrics.setVisibility(View.GONE);
-                    }
-                }
-            });
-        }).start();
     }
 
     @Override
@@ -607,209 +312,80 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         runOnUiThread(() -> {
             int playIcon = isPlaying ? R.drawable.ic_pause_minimal : R.drawable.ic_play_minimal;
             btnMiniPlayPause.setImageResource(playIcon);
-            btnPlayerPlayPause.setImageResource(playIcon);
+            playerViewController.updatePlaybackState(isPlaying);
         });
     }
 
     @Override
     public void onProgress(int position, int duration) {
-        runOnUiThread(() -> {
-            marsCurvedEdgeSeekBar.setMax(duration);
-            marsCurvedEdgeSeekBar.setProgress(position);
-
-            // Update Synchronized Lyrics real-time line
-            if (currentLyrics != null && !currentLyrics.isEmpty()) {
-                int activeIdx = LyricsHelper.getActiveLyricIndex(currentLyrics, position);
-                if (activeIdx >= 0 && activeIdx < currentLyrics.size()) {
-                    lyricsAdapter.setActiveIndex(activeIdx);
-                    tvCurrentLyricLine.setText(currentLyrics.get(activeIdx).getText());
-                    if (isLyricsVisible) {
-                        rvLyrics.smoothScrollToPosition(activeIdx);
-                    }
-                }
-            }
-        });
+        runOnUiThread(() -> playerViewController.updateProgress(position, duration));
     }
 
     @Override
     public void onDynamicColorChanged(int color) {
-        runOnUiThread(() -> {
-            marsCurvedEdgeSeekBar.setActiveColor(color);
-            lyricsAdapter.setActiveColor(color);
-            tvCurrentLyricLine.setTextColor(color);
-            btnPlayPauseWrapper.setBackgroundTintList(ColorStateList.valueOf(color));
-        });
-    }
-
-    private void updateShuffleRepeatState() {
-        if (audioService == null) return;
-        btnShuffle.setImageTintList(ColorStateList.valueOf(
-                audioService.isShuffle() ? getColor(R.color.accent_mars) : getColor(R.color.text_muted)));
-        btnRepeat.setImageTintList(ColorStateList.valueOf(
-                audioService.isRepeat() ? getColor(R.color.accent_mars) : getColor(R.color.text_muted)));
+        runOnUiThread(() -> playerViewController.updateDynamicColor(color));
     }
 
     public void showSongTagEditorDialog(Song song) {
-        if (song == null) return;
-        android.app.Dialog dialog = new android.app.Dialog(this);
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_tag_editor);
+        TagEditorDialog.show(this, song, repository, this::loadSongs);
+    }
 
-        android.view.Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        }
+    @Override
+    public void onPlayPause() {
+        if (audioService != null) audioService.togglePlayPause();
+    }
 
-        EditText etTitle = dialog.findViewById(R.id.etTitle);
-        EditText etArtist = dialog.findViewById(R.id.etArtist);
-        ImageView ivDialogArt = dialog.findViewById(R.id.ivDialogArt);
-        View pbLoading = dialog.findViewById(R.id.pbCoverLoading);
-        TextView tvStatus = dialog.findViewById(R.id.tvCoverStatus);
-        View btnFindCover = dialog.findViewById(R.id.btnFindCover);
-        View btnSmartClean = dialog.findViewById(R.id.btnSmartClean);
-        TextView btnToggleSlowed = dialog.findViewById(R.id.btnToggleSlowed);
-        View btnCancel = dialog.findViewById(R.id.btnCancelTag);
-        View btnSave = dialog.findViewById(R.id.btnSaveTag);
+    @Override
+    public void onNext() {
+        if (audioService != null) audioService.playNext();
+    }
 
-        View layoutCoverChoices = dialog.findViewById(R.id.layoutCoverChoices);
-        ImageView ivChoice1 = dialog.findViewById(R.id.ivChoice1);
-        ImageView ivChoice2 = dialog.findViewById(R.id.ivChoice2);
-        ImageView ivChoice3 = dialog.findViewById(R.id.ivChoice3);
+    @Override
+    public void onPrev() {
+        if (audioService != null) audioService.playPrev();
+    }
 
-        etTitle.setText(song.getTitle());
-        etArtist.setText(song.getArtist());
-        AlbumArtHelper.loadIntoImageView(ivDialogArt, song, 12);
+    @Override
+    public void onToggleShuffle() {
+        if (audioService != null) audioService.toggleShuffle();
+    }
 
-        final android.graphics.Bitmap[] suggestedBitmap = new android.graphics.Bitmap[1];
+    @Override
+    public void onToggleRepeat() {
+        if (audioService != null) audioService.toggleRepeat();
+    }
 
-        // Shortcut botón (Slowed): añade o quita con un toque
-        Runnable updateSlowedBtnStyle = () -> {
-            String currentTitle = etTitle.getText().toString();
-            boolean hasSlowed = currentTitle.toLowerCase().contains("slowed");
-            btnToggleSlowed.setTextColor(getColor(hasSlowed ? R.color.accent_mars : R.color.text_secondary));
-        };
-        updateSlowedBtnStyle.run();
+    @Override
+    public void onSeekTo(int positionMs) {
+        if (audioService != null) audioService.seekTo(positionMs);
+    }
 
-        btnToggleSlowed.setOnClickListener(v -> {
-            String t = etTitle.getText().toString().trim();
-            if (t.matches("(?i).*\\s*\\(slowed\\)\\s*$")) {
-                t = t.replaceAll("(?i)\\s*\\(slowed\\)\\s*$", "").trim();
-            } else {
-                t = t + " (Slowed)";
-            }
-            etTitle.setText(t);
-            updateSlowedBtnStyle.run();
-        });
+    @Override
+    public Song getNextSong() {
+        return audioService != null ? audioService.getNextSong() : null;
+    }
 
-        btnSmartClean.setOnClickListener(v -> {
-            btnSmartClean.animate().rotationBy(360).setDuration(400).start();
-            com.rafa.play.util.TagSanitizer.CleanResult result =
-                    com.rafa.play.util.TagSanitizer.clean(etTitle.getText().toString(), etArtist.getText().toString(), song.getData());
-            etTitle.setText(result.title);
-            etArtist.setText(result.artist);
-            updateSlowedBtnStyle.run();
-            Toast.makeText(this, "Etiquetas organizadas", Toast.LENGTH_SHORT).show();
-        });
+    @Override
+    public Song getPrevSong() {
+        return audioService != null ? audioService.getPrevSong() : null;
+    }
 
-        btnFindCover.setOnClickListener(v -> {
-            String qTitle = etTitle.getText().toString().trim();
-            String qArtist = etArtist.getText().toString().trim();
-            pbLoading.setVisibility(View.VISIBLE);
-            layoutCoverChoices.setVisibility(View.GONE);
-            tvStatus.setText("Buscando portadas e información...");
+    @Override
+    public boolean isShuffle() {
+        return audioService != null && audioService.isShuffle();
+    }
 
-            com.rafa.play.util.ArtworkSearchHelper.searchCovers(this, qTitle, qArtist, new com.rafa.play.util.ArtworkSearchHelper.MultiCoverCallback() {
-                @Override
-                public void onCoversFound(java.util.List<android.graphics.Bitmap> bitmaps, com.rafa.play.util.ArtworkSearchHelper.TrackMetadataSuggestion suggestedMeta) {
-                    pbLoading.setVisibility(View.GONE);
-
-                    // Si encontramos metadatos en línea y el artista era desconocido, autocompletar
-                    if (suggestedMeta != null) {
-                        String curArtist = etArtist.getText().toString().trim();
-                        if (curArtist.isEmpty() || curArtist.equalsIgnoreCase("Desconocido")) {
-                            etArtist.setText(suggestedMeta.artist);
-                        }
-                    }
-
-                    if (bitmaps != null && !bitmaps.isEmpty()) {
-                        suggestedBitmap[0] = bitmaps.get(0);
-                        ivDialogArt.setImageTintList(null);
-                        ivDialogArt.setImageBitmap(bitmaps.get(0));
-
-                        tvStatus.setText("Encontradas " + bitmaps.size() + " portadas");
-
-                        // Configurar miniaturas para elegir
-                        layoutCoverChoices.setVisibility(View.VISIBLE);
-                        ImageView[] views = {ivChoice1, ivChoice2, ivChoice3};
-                        for (int i = 0; i < 3; i++) {
-                            if (i < bitmaps.size()) {
-                                android.graphics.Bitmap b = bitmaps.get(i);
-                                views[i].setVisibility(View.VISIBLE);
-                                views[i].setImageBitmap(b);
-                                views[i].setOnClickListener(cv -> {
-                                    suggestedBitmap[0] = b;
-                                    ivDialogArt.setImageBitmap(b);
-                                });
-                            } else {
-                                views[i].setVisibility(View.GONE);
-                            }
-                        }
-                    } else {
-                        tvStatus.setText("Información actualizada");
-                    }
-                }
-
-                @Override
-                public void onNoCover() {
-                    pbLoading.setVisibility(View.GONE);
-                    tvStatus.setText("No se encontró portada sugerida");
-                }
-
-                @Override
-                public void onError(String message) {
-                    pbLoading.setVisibility(View.GONE);
-                    tvStatus.setText("Error de red");
-                }
-            });
-        });
-
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-
-        btnSave.setOnClickListener(v -> {
-            String newTitle = etTitle.getText().toString().trim();
-            String newArtist = etArtist.getText().toString().trim();
-            if (newTitle.isEmpty()) newTitle = "Sin título";
-            if (newArtist.isEmpty()) newArtist = "Desconocido";
-
-            repository.updateSongTags(song.getId(), newTitle, newArtist);
-
-            if (suggestedBitmap[0] != null) {
-                com.rafa.play.util.ArtworkSearchHelper.saveCustomCover(this, song.getId(), suggestedBitmap[0]);
-                AlbumArtHelper.invalidateSongArt(song.getId());
-            }
-
-            dialog.dismiss();
-            loadSongs();
-            Toast.makeText(this, "Cambios guardados", Toast.LENGTH_SHORT).show();
-        });
-
-        dialog.show();
+    @Override
+    public boolean isRepeat() {
+        return audioService != null && audioService.isRepeat();
     }
 
     @Override
     public void onBackPressed() {
-        if (fullPlayerLayout.getVisibility() == View.VISIBLE) {
-            if (isLyricsVisible) {
-                isLyricsVisible = false;
-                rvLyrics.setVisibility(View.GONE);
-                btnToggleLyrics.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
-                return;
-            }
-            closeFullPlayer();
-        } else {
-            super.onBackPressed();
+        if (playerViewController != null && playerViewController.handleBackPressed()) {
+            return;
         }
+        super.onBackPressed();
     }
 
     @Override

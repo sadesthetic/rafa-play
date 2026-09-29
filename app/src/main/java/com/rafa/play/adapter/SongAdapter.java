@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.rafa.play.R;
 import com.rafa.play.model.Song;
-import com.rafa.play.views.CurvedArcSeekBar;
+import com.rafa.play.views.MarsCurvedEdgeSeekBar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +70,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
         Song song = songList.get(position);
         holder.tvTitle.setText(song.getTitle());
         holder.tvArtist.setText(song.getArtist());
-        holder.tvDuration.setText(CurvedArcSeekBar.formatDuration(song.getDuration()));
+        holder.tvDuration.setText(MarsCurvedEdgeSeekBar.formatDuration(song.getDuration()));
 
         boolean isActive = (song.getId() == activeSongId);
         holder.ivActiveIndicator.setVisibility(isActive ? View.VISIBLE : View.GONE);
