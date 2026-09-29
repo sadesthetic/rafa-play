@@ -91,7 +91,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private LyricsAdapter lyricsAdapter;
     private List<LyricLine> currentLyrics = new ArrayList<>();
 
-    private TextView tvPlayerTitle;
     private TextView tvPlayerArtist;
     private TextView tvPlayerTopTitle;
     private TextView tvCurrentLyricLine;
@@ -173,7 +172,6 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         marsCurvedEdgeSeekBar = findViewById(R.id.marsCurvedEdgeSeekBar);
         rvLyrics = findViewById(R.id.rvLyrics);
 
-        tvPlayerTitle = findViewById(R.id.tvPlayerTitle);
         tvPlayerArtist = findViewById(R.id.tvPlayerArtist);
         tvPlayerTopTitle = findViewById(R.id.tvPlayerTopTitle);
         tvCurrentLyricLine = findViewById(R.id.tvCurrentLyricLine);
@@ -537,9 +535,8 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             AlbumArtHelper.loadIntoImageView(ivMiniArt, song, 12);
 
             // Mars curved full player
-            tvPlayerTitle.setText(song.getTitle());
+            tvPlayerTopTitle.setText(song.getTitle());
             tvPlayerArtist.setText(song.getArtist());
-            tvPlayerTopTitle.setText(song.getAlbum());
             AlbumArtHelper.loadIntoImageView(ivPlayerArt, song, 0);
 
             marsCurvedEdgeSeekBar.setMax((int) song.getDuration());

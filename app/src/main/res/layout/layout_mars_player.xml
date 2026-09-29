@@ -35,7 +35,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="16dp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp">
 
@@ -49,17 +49,30 @@
                 android:src="@drawable/ic_down_minimal"
                 app:tint="@color/text_primary" />
 
-            <TextView
-                android:id="@+id/tvPlayerTopTitle"
+            <LinearLayout
+                android:id="@+id/pillPlayerTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
-                android:ellipsize="end"
-                android:maxWidth="200dp"
-                android:maxLines="1"
-                android:text="Rafa Play"
-                android:textColor="#CCFFFFFF"
-                android:textSize="12sp" />
+                android:background="@drawable/shape_title_pill"
+                android:elevation="4dp"
+                android:gravity="center"
+                android:paddingStart="18dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="7dp">
+
+                <TextView
+                    android:id="@+id/tvPlayerTopTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxWidth="210dp"
+                    android:maxLines="1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -112,7 +125,7 @@
         android:paddingEnd="24dp"
         android:paddingBottom="24dp">
 
-        <!-- Track Title and Artist -->
+        <!-- Track Artist and Live Lyric Preview -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -120,25 +133,13 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tvPlayerTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/text_primary"
-                android:textSize="21sp"
-                android:textStyle="bold"
-                tools:text="Song Title" />
-
-            <TextView
                 android:id="@+id/tvPlayerArtist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 tools:text="Artist Name" />
 
             <!-- Real-time current synchronized lyric line preview -->
