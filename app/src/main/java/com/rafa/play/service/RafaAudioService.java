@@ -249,6 +249,22 @@ public class RafaAudioService extends Service implements MediaPlayer.OnPreparedL
         return null;
     }
 
+    public Song getNextSong() {
+        if (playlist != null && !playlist.isEmpty() && currentIndex >= 0) {
+            int next = (currentIndex + 1) % playlist.size();
+            return playlist.get(next);
+        }
+        return null;
+    }
+
+    public Song getPrevSong() {
+        if (playlist != null && !playlist.isEmpty() && currentIndex >= 0) {
+            int prev = (currentIndex - 1 + playlist.size()) % playlist.size();
+            return playlist.get(prev);
+        }
+        return null;
+    }
+
     public List<Song> getQueue() {
         return playlist;
     }

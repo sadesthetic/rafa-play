@@ -79,6 +79,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
     private View fullPlayerLayout;
     private MarsCurvedHeaderLayout marsCurvedHeader;
     private ImageView ivPlayerArt;
+    private ImageView ivPlayerArtIncoming;
     private MarsCurvedEdgeSeekBar marsCurvedEdgeSeekBar;
     private RecyclerView rvLyrics;
     private LyricsAdapter lyricsAdapter;
@@ -155,6 +156,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         fullPlayerLayout = findViewById(R.id.fullPlayerLayout);
         marsCurvedHeader = findViewById(R.id.marsCurvedHeader);
         ivPlayerArt = findViewById(R.id.ivPlayerArt);
+        ivPlayerArtIncoming = findViewById(R.id.ivPlayerArtIncoming);
         marsCurvedEdgeSeekBar = findViewById(R.id.marsCurvedEdgeSeekBar);
         rvLyrics = findViewById(R.id.rvLyrics);
 
@@ -296,7 +298,7 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
         findViewById(R.id.btnClosePlayer).setOnClickListener(v -> closeFullPlayer());
 
         com.rafa.play.util.ArtworkSwipeHelper artworkSwipeHelper = new com.rafa.play.util.ArtworkSwipeHelper(
-                this, ivPlayerArt, fullPlayerLayout, new com.rafa.play.util.ArtworkSwipeHelper.Callback() {
+                this, ivPlayerArt, ivPlayerArtIncoming, fullPlayerLayout, new com.rafa.play.util.ArtworkSwipeHelper.Callback() {
             @Override
             public void onNextTrack() {
                 if (audioService != null) audioService.playNext();
@@ -310,6 +312,16 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             @Override
             public void onDismissPlayer() {
                 closeFullPlayer();
+            }
+
+            @Override
+            public Song getNextSong() {
+                return audioService != null ? audioService.getNextSong() : null;
+            }
+
+            @Override
+            public Song getPrevSong() {
+                return audioService != null ? audioService.getPrevSong() : null;
             }
         });
 
@@ -408,26 +420,39 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
 
     private void animateTrackSwipe(boolean toNext) {
         if (audioService == null) return;
+        Song targetSong = toNext ? audioService.getNextSong() : audioService.getPrevSong();
         float width = (ivPlayerArt != null && ivPlayerArt.getWidth() > 0) ? ivPlayerArt.getWidth() : 400f;
-        float outX = toNext ? -width * 0.35f : width * 0.35f;
-        float inX = toNext ? width * 0.35f : -width * 0.35f;
+        float outX = toNext ? -width : width;
+
+        if (targetSong != null && ivPlayerArtIncoming != null) {
+            AlbumArtHelper.loadIntoImageView(ivPlayerArtIncoming, targetSong, 0);
+            ivPlayerArtIncoming.setVisibility(View.VISIBLE);
+            ivPlayerArtIncoming.setAlpha(0.5f);
+            ivPlayerArtIncoming.setScaleX(0.92f);
+            ivPlayerArtIncoming.setScaleY(0.92f);
+            ivPlayerArtIncoming.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(160)
+                    .start();
+        }
 
         ivPlayerArt.animate()
                 .translationX(outX)
-                .alpha(0.35f)
-                .setDuration(120)
+                .alpha(0f)
+                .setDuration(160)
                 .withEndAction(() -> {
                     if (toNext) {
                         audioService.playNext();
                     } else {
                         audioService.playPrev();
                     }
-                    ivPlayerArt.setTranslationX(inX);
-                    ivPlayerArt.animate()
-                            .translationX(0f)
-                            .alpha(1f)
-                            .setDuration(160)
-                            .start();
+                    ivPlayerArt.setTranslationX(0f);
+                    ivPlayerArt.setAlpha(1f);
+                    if (ivPlayerArtIncoming != null) {
+                        ivPlayerArtIncoming.setVisibility(View.GONE);
+                    }
                 }).start();
     }
 
@@ -542,9 +567,9 @@ public class MainActivity extends AppCompatActivity implements RafaAudioService.
             tvMiniArtist.setText(song.getArtist());
             AlbumArtHelper.loadIntoImageView(ivMiniArt, song, 12);
 
-            // Mars curved full player
-            tvPlayerTopTitle.setText(song.getTitle());
-            tvPlayerArtist.setText(song.getArtist());
+            // Mars curved full player: Artist on top pill, Song title below
+            tvPlayerTopTitle.setText(song.getArtist());
+            tvPlayerArtist.setText(song.getTitle());
             AlbumArtHelper.loadIntoImageView(ivPlayerArt, song, 0);
 
             marsCurvedEdgeSeekBar.setMax((int) song.getDuration());

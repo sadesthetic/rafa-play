@@ -16,6 +16,15 @@
         android:layout_height="400dp"
         android:layout_alignParentTop="true">
 
+        <!-- Incoming Album Art Image for smooth swipe transition preview -->
+        <ImageView
+            android:id="@+id/ivPlayerArtIncoming"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            android:src="@drawable/ic_music_minimal"
+            android:visibility="gone" />
+
         <!-- Full Album Art Image filling the dome -->
         <ImageView
             android:id="@+id/ivPlayerArt"
@@ -137,24 +146,25 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/text_secondary"
-                android:textSize="15sp"
-                tools:text="Artist Name" />
+                android:gravity="center"
+                android:maxLines="2"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="Song Title" />
 
-            <!-- Real-time current synchronized lyric line preview -->
+            <!-- Real-time current synchronized lyric line preview: 2 lines with no ellipsis cutoff -->
             <TextView
                 android:id="@+id/tvCurrentLyricLine"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textColor="@color/accent_mars"
                 android:textSize="14sp"
                 android:visibility="gone"
-                tools:text="♪ Current lyrics singing here ♪" />
+                tools:text="♪ Current lyrics singing here\ncontinued on second line ♪" />
         </LinearLayout>
 
         <View
