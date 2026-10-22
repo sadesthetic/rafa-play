@@ -25,7 +25,8 @@ public class SongsFragment extends Fragment {
     private RecyclerView rvSongs;
     private TextView tvEmpty;
     private SongAdapter songAdapter;
-    private List<Song> allSongs = new ArrayList<>();
+    private final List<Song> allSongs = new ArrayList<>();
+    private final List<Song> currentSongs = new ArrayList<>();
 
     @Nullable
     @Override
@@ -37,7 +38,7 @@ public class SongsFragment extends Fragment {
         rvSongs.setLayoutManager(new LinearLayoutManager(getContext()));
         songAdapter = new SongAdapter(requireContext(), (song, position) -> {
             if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).playSongFromList(allSongs, position);
+                ((MainActivity) getActivity()).playSongFromList(new ArrayList<>(currentSongs), position);
             }
         }, (song, anchor) -> {
             if (getActivity() instanceof MainActivity) {
@@ -54,18 +55,25 @@ public class SongsFragment extends Fragment {
     }
 
     public void setSongs(List<Song> songs) {
-        this.allSongs = songs != null ? songs : new ArrayList<>();
+        this.allSongs.clear();
+        if (songs != null) {
+            this.allSongs.addAll(songs);
+        }
+        this.currentSongs.clear();
+        this.currentSongs.addAll(this.allSongs);
         if (songAdapter != null) {
-            songAdapter.setSongs(allSongs);
+            songAdapter.setSongs(this.currentSongs);
         }
         if (tvEmpty != null) {
-            tvEmpty.setVisibility(allSongs.isEmpty() ? View.VISIBLE : View.GONE);
+            tvEmpty.setVisibility(this.currentSongs.isEmpty() ? View.VISIBLE : View.GONE);
         }
     }
 
     public void filterSongs(String query) {
         if (query == null || query.trim().isEmpty()) {
-            songAdapter.setSongs(allSongs);
+            currentSongs.clear();
+            currentSongs.addAll(allSongs);
+            songAdapter.setSongs(currentSongs);
             return;
         }
         String q = query.toLowerCase().trim();
@@ -75,7 +83,9 @@ public class SongsFragment extends Fragment {
                 filtered.add(s);
             }
         }
-        songAdapter.setSongs(filtered);
+        currentSongs.clear();
+        currentSongs.addAll(filtered);
+        songAdapter.setSongs(currentSongs);
     }
 
     public void setActiveSongId(long id) {

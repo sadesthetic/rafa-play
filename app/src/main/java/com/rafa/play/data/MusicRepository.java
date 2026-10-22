@@ -42,7 +42,8 @@ public class MusicRepository {
                 MediaStore.Audio.Media.DURATION,
                 MediaStore.Audio.Media.DATA,
                 MediaStore.Audio.Media.ALBUM_ID,
-                MediaStore.Audio.Media.DATE_ADDED
+                MediaStore.Audio.Media.DATE_ADDED,
+                MediaStore.Audio.Media.SIZE
         };
 
         String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0 AND " + MediaStore.Audio.Media.DURATION + " >= 10000";
@@ -58,6 +59,7 @@ public class MusicRepository {
                 int dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
                 int albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID);
                 int dateCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED);
+                int sizeCol = cursor.getColumnIndex(MediaStore.Audio.Media.SIZE);
 
                 do {
                     long id = cursor.getLong(idCol);
@@ -68,6 +70,7 @@ public class MusicRepository {
                     String data = cursor.getString(dataCol);
                     long albumId = cursor.getLong(albumIdCol);
                     long dateAdded = cursor.getLong(dateCol);
+                    long size = (sizeCol != -1) ? cursor.getLong(sizeCol) : 0;
 
                     SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
                     String overrideTitle = sp.getString("tag_title_" + id, null);
@@ -75,7 +78,7 @@ public class MusicRepository {
                     if (overrideTitle != null) title = overrideTitle;
                     if (overrideArtist != null) artist = overrideArtist;
 
-                    songs.add(new Song(id, title, artist, album, duration, data, albumId, dateAdded));
+                    songs.add(new Song(id, title, artist, album, duration, data, albumId, dateAdded, size));
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
