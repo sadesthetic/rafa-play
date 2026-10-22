@@ -16,6 +16,7 @@ import com.rafa.play.MainActivity;
 import com.rafa.play.R;
 import com.rafa.play.adapter.SongAdapter;
 import com.rafa.play.model.Song;
+import com.rafa.play.views.FastScrollerView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ public class SongsFragment extends Fragment {
 
     private RecyclerView rvSongs;
     private TextView tvEmpty;
+    private FastScrollerView fastScroller;
     private SongAdapter songAdapter;
     private final List<Song> allSongs = new ArrayList<>();
     private final List<Song> currentSongs = new ArrayList<>();
@@ -34,6 +36,7 @@ public class SongsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_songs, container, false);
         rvSongs = view.findViewById(R.id.rvSongs);
         tvEmpty = view.findViewById(R.id.tvEmptySongs);
+        fastScroller = view.findViewById(R.id.fastScroller);
 
         rvSongs.setLayoutManager(new LinearLayoutManager(getContext()));
         songAdapter = new SongAdapter(requireContext(), (song, position) -> {
@@ -46,6 +49,21 @@ public class SongsFragment extends Fragment {
             }
         });
         rvSongs.setAdapter(songAdapter);
+
+        fastScroller.attachToRecyclerView(rvSongs, new FastScrollerView.SongListProvider() {
+            @Override
+            public int getSongCount() {
+                return currentSongs.size();
+            }
+
+            @Override
+            public Song getSong(int position) {
+                if (position >= 0 && position < currentSongs.size()) {
+                    return currentSongs.get(position);
+                }
+                return null;
+            }
+        });
 
         if (getActivity() instanceof MainActivity) {
             setSongs(((MainActivity) getActivity()).getCachedSongs());
