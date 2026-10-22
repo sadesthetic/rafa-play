@@ -34,7 +34,7 @@ import java.net.URL;
 
 public class AppUpdater {
 
-    private static final String API_LATEST = "https://api.github.com/repos/sadesthetic/rafa-play/releases/latest";
+    private static final String API_RELEASES = "https://api.github.com/repos/sadesthetic/rafa-play/releases?per_page=5";
 
     public interface UpdateCheckCallback {
         void onUpdateAvailable(String newVersion, String apkDownloadUrl, String releaseNotes);
@@ -45,11 +45,13 @@ public class AppUpdater {
     public static void checkUpdate(Context context, boolean showToastIfUpToDate, UpdateCheckCallback callback) {
         new Thread(() -> {
             try {
-                URL url = new URL(API_LATEST);
+                URL url = new URL(API_RELEASES);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
                 conn.setRequestProperty("User-Agent", "RafaPlayApp");
+                conn.setRequestProperty("Cache-Control", "no-cache");
+                conn.setRequestProperty("Pragma", "no-cache");
                 conn.setConnectTimeout(8000);
                 conn.setReadTimeout(8000);
 
@@ -62,39 +64,54 @@ public class AppUpdater {
                     }
                     reader.close();
 
-                    JSONObject release = new JSONObject(sb.toString());
-                    String tagName = release.getString("tag_name");
-                    String releaseNotes = release.optString("body", "");
+                    JSONArray releases = new JSONArray(sb.toString());
+                    if (releases.length() == 0) {
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            if (callback != null) callback.onNoUpdate();
+                        });
+                        return;
+                    }
 
                     String rawCurVer = BuildConfig.VERSION_NAME;
                     try {
                         rawCurVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
                     } catch (Exception ignored) {}
 
-                    String cleanNewVer = tagName.replaceAll("^[vV]", "").trim();
                     String cleanCurVer = rawCurVer.replaceAll("^[vV]", "").trim();
+                    JSONObject targetRelease = null;
+                    String targetDownloadUrl = null;
 
-                    if (isNewerVersion(cleanNewVer, cleanCurVer)) {
-                        String downloadUrl = null;
-                        JSONArray assets = release.optJSONArray("assets");
-                        if (assets != null) {
-                            for (int i = 0; i < assets.length(); i++) {
-                                JSONObject asset = assets.getJSONObject(i);
-                                String name = asset.getString("name");
-                                if (name.endsWith(".apk")) {
-                                    downloadUrl = asset.getString("browser_download_url");
-                                    break;
+                    for (int r = 0; r < releases.length(); r++) {
+                        JSONObject rel = releases.getJSONObject(r);
+                        if (rel.optBoolean("draft", false)) continue;
+                        String tag = rel.optString("tag_name", "");
+                        String cleanNewVer = tag.replaceAll("^[vV]", "").trim();
+                        if (isNewerVersion(cleanNewVer, cleanCurVer)) {
+                            JSONArray assets = rel.optJSONArray("assets");
+                            if (assets != null) {
+                                for (int i = 0; i < assets.length(); i++) {
+                                    JSONObject asset = assets.getJSONObject(i);
+                                    String name = asset.optString("name", "");
+                                    String downloadUrl = asset.optString("browser_download_url", "");
+                                    if (name.toLowerCase().endsWith(".apk") || downloadUrl.toLowerCase().endsWith(".apk")) {
+                                        targetRelease = rel;
+                                        targetDownloadUrl = downloadUrl;
+                                        break;
+                                    }
                                 }
                             }
+                            if (targetRelease != null) break;
                         }
+                    }
 
-                        if (downloadUrl != null) {
-                            String finalDownloadUrl = downloadUrl;
-                            new Handler(Looper.getMainLooper()).post(() -> {
-                                if (callback != null) callback.onUpdateAvailable(tagName, finalDownloadUrl, releaseNotes);
-                            });
-                            return;
-                        }
+                    if (targetRelease != null && targetDownloadUrl != null) {
+                        String tagName = targetRelease.getString("tag_name");
+                        String releaseNotes = targetRelease.optString("body", "");
+                        String finalDownloadUrl = targetDownloadUrl;
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            if (callback != null) callback.onUpdateAvailable(tagName, finalDownloadUrl, releaseNotes);
+                        });
+                        return;
                     }
 
                     final String displayVer = rawCurVer;
